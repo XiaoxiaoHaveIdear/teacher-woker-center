@@ -1,0 +1,3069 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>教师个人智能工作台</title>
+  <script src="vendor/tailwind.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef3ff', 100: '#e0eaff', 200: '#c3d5ff', 300: '#9ab8ff',
+              400: '#6f97ff', 500: '#4a7dff', 600: '#2e6bff', 700: '#2456d6', 800: '#1e45ad'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* 隐藏滚动条但保留滚动功能 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    
+    /* 页面切换动画 */
+    .page {
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .page.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* 底部导航安全区 */
+    .safe-bottom {
+      padding-bottom: env(safe-area-inset-bottom, 8px);
+    }
+    
+    /* 状态标签 */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* ===== 设计系统：字体 / 背景 / 品牌基调 ===== */
+    :root { --brand: #2e6bff; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+      background: #e8eaee;
+      -webkit-font-smoothing: antialiased;
+      font-variant-numeric: tabular-nums;
+    }
+    #app { background: #f4f5f7; }
+    input, select, textarea { font-family: inherit; }
+
+    /* ===== 底部导航：Material 3 指示器 ===== */
+    .nav-btn { color: #98a1ad; transition: color .2s; }
+    .nav-btn.active { color: var(--brand); }
+    .nav-btn .nav-ico { transition: background .2s, color .2s; }
+    .nav-btn.active .nav-ico { background: #e0eaff; }
+
+    /* ===== 弹层/子页面动效 ===== */
+    .modal-card { animation: sheetUp .24s cubic-bezier(.32,.72,.35,1); }
+    @keyframes sheetUp {
+      from { transform: translateY(32px); opacity: .5; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    #student-subpage {
+      transform: translateX(100%);
+      transition: transform .26s cubic-bezier(.32,.72,.35,1);
+    }
+    #student-subpage.open { transform: translateX(0); }
+  </style>
+</head>
+<body class="bg-gray-200">
+  <div id="app" class="max-w-md mx-auto bg-gray-50 min-h-screen relative pb-32 shadow-2xl">
+    
+    <!-- ========== 首页 ========== -->
+    <div id="page-home" class="page active">
+      <!-- 顶部：标题 + 问候 + 装饰插画 -->
+      <div class="bg-gradient-to-b from-[#d6e9ff] via-[#edf5ff] to-[#f4f5f7] px-5 pt-9 pb-5">
+        <div class="flex items-center justify-between mb-5">
+          <h1 class="text-[26px] font-bold text-gray-900 tracking-tight">教师工作台</h1>
+          <button class="relative w-9 h-9 bg-white/70 backdrop-blur rounded-full flex items-center justify-center shadow-sm" onclick="switchPage('todo')">
+            <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span id="home-bell-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center">0</span>
+          </button>
+        </div>
+        <div class="flex items-center">
+          <div class="w-14 h-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xl font-bold shadow-md shrink-0" id="home-avatar">老</div>
+          <div class="ml-3 flex-1 min-w-0">
+            <p class="text-lg font-bold text-gray-900"><span id="home-greeting">早上好</span>，<span id="home-teacher-name" class="border-b border-dashed border-gray-400" onclick="editTeacherName()">老师</span>
+              <svg class="w-4 h-4 text-amber-400 inline-block align-[-2px] ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            </p>
+            <p class="text-xs text-gray-500 mt-0.5" id="home-date">今天是</p>
+          </div>
+          <svg class="w-24 h-16 shrink-0" viewBox="0 0 96 64" fill="none">
+            <rect x="36" y="4" width="56" height="38" rx="4" fill="#d8c39a"/>
+            <rect x="39" y="7" width="50" height="32" rx="2" fill="#3b5e4b"/>
+            <path d="M46 20c4-3 8 3 12 0" stroke="#9fd3b4" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="78" cy="26" r="3" stroke="#9fd3b4" stroke-width="2"/>
+            <rect x="46" y="44" width="34" height="6" rx="2" fill="#57a7ff"/>
+            <rect x="50" y="51" width="30" height="6" rx="2" fill="#f6b26b"/>
+            <rect x="54" y="58" width="26" height="6" rx="2" fill="#8fce9e"/>
+            <path d="M18 34c-2-8 2-14 6-16 1 6-1 12-6 16zm4 0c6-6 12-6 14-4-3 4-9 6-14 4z" fill="#6db47f"/>
+            <path d="M14 44h16l-2 14H16l-2-14z" fill="#e0a37a"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 今日课堂概览 -->
+      <div class="px-4 -mt-1">
+        <div class="rounded-3xl bg-gradient-to-br from-[#57a7ff] to-[#2e6bff] p-3 shadow-lg shadow-brand-600/20">
+          <div class="flex items-center justify-between px-1.5 pt-1 pb-2.5">
+            <p class="text-white font-bold text-[15px]">今日课堂概览</p>
+            <button class="text-xs text-brand-600 bg-white rounded-full px-2.5 py-1 flex items-center gap-1 font-medium" onclick="document.getElementById('home-week').scrollIntoView({behavior:'smooth'})">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+              本周概览 ›
+            </button>
+          </div>
+          <div class="bg-white rounded-2xl grid grid-cols-4 divide-x divide-gray-100 py-3">
+            <button class="text-center px-1 active:scale-95 transition-transform" onclick="switchPage('schedule')">
+              <svg class="w-5 h-5 mx-auto text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+              <p class="text-xl font-bold text-gray-900 mt-1" id="hs-classes">0</p>
+              <p class="text-[11px] text-gray-600 mt-0.5">今日课程</p>
+              <p class="text-[10px] text-gray-400 mt-0.5 truncate" id="hs-classes-sub"></p>
+            </button>
+            <button class="text-center px-1 active:scale-95 transition-transform" onclick="switchPage('homework')">
+              <svg class="w-5 h-5 mx-auto text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+              <p class="text-xl font-bold text-gray-900 mt-1" id="hs-hw">0</p>
+              <p class="text-[11px] text-gray-600 mt-0.5">待交作业</p>
+              <p class="text-[10px] text-gray-400 mt-0.5 truncate" id="hs-hw-sub"></p>
+            </button>
+            <button class="text-center px-1 active:scale-95 transition-transform" onclick="switchPage('homework')">
+              <svg class="w-5 h-5 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+              <p class="text-xl font-bold text-gray-900 mt-1" id="hs-correct">0</p>
+              <p class="text-[11px] text-gray-600 mt-0.5">待订正</p>
+              <p class="text-[10px] text-gray-400 mt-0.5 truncate">改完才算真会</p>
+            </button>
+            <button class="text-center px-1 active:scale-95 transition-transform" onclick="switchPage('student')">
+              <svg class="w-5 h-5 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+              <p class="text-xl font-bold text-gray-900 mt-1" id="hs-focus">0</p>
+              <p class="text-[11px] text-gray-600 mt-0.5">重点关注</p>
+              <p class="text-[10px] text-gray-400 mt-0.5 truncate">需及时关注</p>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 功能宫格 -->
+      <div class="px-4 mt-4">
+        <div class="bg-white rounded-2xl shadow-sm px-2 py-3.5 grid grid-cols-6">
+          <button class="flex flex-col items-center active:scale-95 transition-transform" onclick="goStudentSub('seat')">
+            <div class="w-11 h-11 rounded-2xl bg-brand-500 flex items-center justify-center mb-1.5 shadow-sm">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </div>
+            <span class="text-[11px] text-gray-700">智能排座</span>
+          </button>
+          <button class="flex flex-col items-center active:scale-95 transition-transform" onclick="switchPage('homework')">
+            <div class="w-11 h-11 rounded-2xl bg-green-500 flex items-center justify-center mb-1.5 shadow-sm">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+            </div>
+            <span class="text-[11px] text-gray-700">作业收缴</span>
+          </button>
+          <button class="flex flex-col items-center active:scale-95 transition-transform" onclick="goStudentSub('grade')">
+            <div class="w-11 h-11 rounded-2xl bg-orange-500 flex items-center justify-center mb-1.5 shadow-sm">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2H7a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <span class="text-[11px] text-gray-700">成绩记录</span>
+          </button>
+          <button class="flex flex-col items-center active:scale-95 transition-transform" onclick="switchPage('schedule')">
+            <div class="w-11 h-11 rounded-2xl bg-purple-500 flex items-center justify-center mb-1.5 shadow-sm">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            </div>
+            <span class="text-[11px] text-gray-700">课程表</span>
+          </button>
+          <button class="flex flex-col items-center active:scale-95 transition-transform" onclick="goStudentSub('duty')">
+            <div class="w-11 h-11 rounded-2xl bg-teal-500 flex items-center justify-center mb-1.5 shadow-sm">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+            </div>
+            <span class="text-[11px] text-gray-700">值日表</span>
+          </button>
+          <button class="flex flex-col items-center active:scale-95 transition-transform" onclick="switchPage('student')">
+            <div class="w-11 h-11 rounded-2xl bg-indigo-500 flex items-center justify-center mb-1.5 shadow-sm">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
+            </div>
+            <span class="text-[11px] text-gray-700">学生档案</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 今日待办（平铺，可直接操作） -->
+      <div class="px-4 mt-4">
+        <div class="bg-white rounded-2xl shadow-sm p-4">
+          <div class="flex items-center justify-between mb-2.5">
+            <p class="font-bold text-gray-900 text-[15px]">今日待办 <span id="home-todo-count" class="inline-block text-[10px] text-white bg-red-500 rounded-full px-1.5 py-0.5 align-middle">0</span></p>
+            <button class="text-[11px] text-gray-400" onclick="switchPage('todo')">查看全部 ›</button>
+          </div>
+          <div id="home-todo-list"></div>
+          <p class="text-[10px] text-gray-300 mt-2.5 text-center">点圆点 · 或长按条目，快速完成</p>
+        </div>
+      </div>
+
+      <!-- 本周概览 -->
+      <div class="px-4 mt-4" id="home-week">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <p class="font-bold text-gray-900 text-[15px]">本周概览</p>
+          <p class="text-[11px] text-gray-400" id="home-week-range"></p>
+        </div>
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="bg-white rounded-2xl shadow-sm p-3">
+            <p class="text-[11px] text-gray-500">作业完成率</p>
+            <p class="text-lg font-bold text-green-600 mt-1" id="home-rate">0%</p>
+            <div class="h-1.5 bg-gray-100 rounded-full mt-1.5"><div class="h-full bg-green-500 rounded-full transition-all" id="home-rate-bar" style="width:0%"></div></div>
+            <p class="text-[10px] text-gray-400 mt-1.5" id="home-rate-sub"></p>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm p-3">
+            <p class="text-[11px] text-gray-500">最近考试平均</p>
+            <p class="text-lg font-bold text-brand-600 mt-1" id="home-exam-avg">—</p>
+            <div class="h-1.5 bg-gray-100 rounded-full mt-1.5"><div class="h-full bg-brand-500 rounded-full transition-all" id="home-exam-bar" style="width:0%"></div></div>
+            <p class="text-[10px] text-gray-400 mt-1.5 truncate" id="home-exam-sub"></p>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm p-3">
+            <p class="text-[11px] text-gray-500">本周随记</p>
+            <div class="flex items-end justify-between gap-1 h-9 mt-1.5" id="home-note-bars"></div>
+            <p class="text-[10px] text-gray-400 mt-1" id="home-notes-sub"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 班级动态 -->
+      <div class="px-4 mt-4 pb-32">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <p class="font-bold text-gray-900 text-[15px]">班级动态 <span class="text-[10px] text-brand-600 bg-brand-50 rounded px-1 py-0.5 ml-1">最新</span></p>
+          <button class="text-[11px] text-gray-400" onclick="switchPage('student')">查看全部 ›</button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm divide-y divide-gray-50" id="home-feed"></div>
+      </div>
+    </div>
+
+    <!-- ========== 课表页面 ========== -->
+    <div id="page-schedule" class="page">
+      <div class="sticky top-0 z-10 bg-white/85 backdrop-blur-lg border-b border-gray-200/60">
+      <div class="px-5 pt-8 pb-3">
+        <h1 class="text-[22px] font-bold text-gray-900 mb-3 tracking-tight">智能课程表</h1>
+        <div class="bg-gray-100 p-1 rounded-xl flex">
+          <button class="flex-1 py-2 text-sm font-medium rounded-lg bg-white text-brand-600 shadow-sm" id="schedule-original">原始课表</button>
+          <button class="flex-1 py-2 text-sm font-medium rounded-lg text-gray-600" id="schedule-current">当前课表</button>
+        </div>
+      </div>
+
+      <!-- 星期标签 -->
+      <div class="px-4 pb-3">
+        <div class="flex justify-between text-center" id="weekdays">
+          <!-- 由 renderWeekdays() 动态生成 -->
+        </div>
+      </div>
+      </div>
+
+      <!-- 课表内容 -->
+      <div class="px-4 mt-3 mb-4">
+        <div class="bg-white rounded-2xl shadow-sm p-4">
+          <div class="space-y-3" id="schedule-list">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 调课记录 -->
+      <div class="px-4 mb-4">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-bold text-gray-800">调课留痕</h2>
+          <span class="text-xs text-gray-500" id="schedule-change-count">本学期 0 次</span>
+        </div>
+        <div class="space-y-2" id="schedule-change-list">
+          <!-- 动态生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 作业页面 ========== -->
+    <div id="page-homework" class="page">
+      <div class="bg-white/85 backdrop-blur-lg px-5 pt-8 pb-4 sticky top-0 z-10 border-b border-gray-200/60">
+        <h1 class="text-[22px] font-bold text-gray-900 mb-3 tracking-tight">作业管理</h1>
+        <div class="class-bar mb-3"></div>
+        <!-- 日期选择条 -->
+        <div class="flex space-x-2 overflow-x-auto no-scrollbar mb-3" id="homework-date-filter">
+          <!-- 动态生成 -->
+        </div>
+        <div class="flex space-x-2 overflow-x-auto no-scrollbar mb-3" id="homework-tabs">
+          <!-- 动态生成 -->
+        </div>
+      </div>
+
+      <div class="px-4 pb-32">
+        <!-- 当前作业卡片 -->
+        <div class="bg-white rounded-2xl shadow-sm p-4 mb-4" id="homework-detail">
+          <!-- 动态生成 -->
+        </div>
+
+        <!-- 状态筛选 -->
+        <div class="bg-gray-100 p-1 rounded-xl flex mb-3" id="hw-status-filter">
+          <!-- 动态生成 -->
+        </div>
+
+        <!-- 小组 Tab -->
+        <div class="flex space-x-2 overflow-x-auto no-scrollbar mb-3" id="hw-group-tabs">
+          <!-- 动态生成 -->
+        </div>
+
+        <!-- 学生作业列表 -->
+        <div class="bg-white rounded-2xl shadow-sm p-4">
+          <p class="text-xs text-gray-400 mb-2">批量操作（对当前小组生效）</p>
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <button class="py-2 rounded-xl text-xs font-medium bg-green-100 text-green-700 active:scale-95 transition-transform" onclick="batchSetHomeworkStatus('submitted')">一键已交</button>
+            <button class="py-2 rounded-xl text-xs font-medium bg-gray-100 text-gray-600 active:scale-95 transition-transform" onclick="batchSetHomeworkStatus('unsubmitted')">一键未交</button>
+            <button class="py-2 rounded-xl text-xs font-medium bg-brand-100 text-brand-700 active:scale-95 transition-transform" onclick="batchSetHomeworkCorrect('corrected')">一键已订正</button>
+            <button class="py-2 rounded-xl text-xs font-medium bg-red-100 text-red-700 active:scale-95 transition-transform" onclick="batchSetHomeworkCorrect('need')">一键未订正</button>
+          </div>
+          <div class="space-y-2" id="hw-student-list">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 学生页面 ========== -->
+    <div id="page-student" class="page">
+      <div class="bg-white/85 backdrop-blur-lg px-5 pt-8 pb-4 sticky top-0 z-10 border-b border-gray-200/60">
+        <h1 class="text-[22px] font-bold text-gray-900 mb-3 tracking-tight">学生档案</h1>
+        <div class="class-bar mb-3"></div>
+        <div class="relative">
+          <input type="text" id="student-search" placeholder="搜索姓名、标签或组号" class="w-full bg-gray-100 rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200" oninput="renderStudentList()">
+          <svg class="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+      </div>
+
+      <!-- 功能入口 -->
+      <div class="px-4 mt-4">
+        <div class="grid grid-cols-4 gap-3">
+          <div class="bg-white rounded-2xl py-3.5 px-1 text-center shadow-sm active:scale-95 transition-transform cursor-pointer" onclick="showStudentSubpage('grade')">
+            <div class="w-11 h-11 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-1.5">
+              <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <p class="text-xs text-gray-600">成绩</p>
+          </div>
+          <div class="bg-white rounded-2xl py-3.5 px-1 text-center shadow-sm active:scale-95 transition-transform cursor-pointer" onclick="showStudentSubpage('seat')">
+            <div class="w-11 h-11 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-1.5">
+              <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </div>
+            <p class="text-xs text-gray-600">座位</p>
+          </div>
+          <div class="bg-white rounded-2xl py-3.5 px-1 text-center shadow-sm active:scale-95 transition-transform cursor-pointer" onclick="showStudentSubpage('duty')">
+            <div class="w-11 h-11 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-1.5">
+              <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            </div>
+            <p class="text-xs text-gray-600">值日</p>
+          </div>
+          <div class="bg-white rounded-2xl py-3.5 px-1 text-center shadow-sm active:scale-95 transition-transform cursor-pointer" onclick="showStudentSubpage('committee')">
+            <div class="w-11 h-11 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-1.5">
+              <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </div>
+            <p class="text-xs text-gray-600">班委</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 筛选 chips -->
+      <div class="px-4 mt-3">
+        <div class="flex gap-2 overflow-x-auto no-scrollbar" id="student-filter-chips"></div>
+      </div>
+
+      <!-- 学生列表 -->
+      <div class="px-4 mt-3 mb-4">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-bold text-gray-800">全班学生 <span class="text-sm font-normal text-gray-500" id="student-count">（${students.length}人）</span></h2>
+          <div class="flex gap-3">
+            <button class="text-sm text-brand-600" onclick="exportAllStudents()">导出名单</button>
+            <button class="text-sm text-brand-600" onclick="openImport()">批量导入</button>
+          </div>
+        </div>
+        <div class="space-y-2" id="student-list">
+          <!-- 动态生成 -->
+        </div>
+      </div>
+
+      <!-- 批量导入弹窗 -->
+      <div id="import-modal" class="hidden fixed inset-0 z-40 flex items-end justify-center bg-black/40">
+        <div class="modal-card bg-white w-full rounded-t-3xl p-5 pb-8">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-gray-800 text-lg">批量导入学生</h3>
+            <button class="text-gray-400 p-1" onclick="closeImport()">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 mb-2 leading-relaxed">每行一个学生，可用逗号分隔「组号」和「标签」。<br>示例：<span class="text-gray-700">王小明,3,近视</span> ／ <span class="text-gray-700">李华,2</span> ／ <span class="text-gray-700">张伟</span></p>
+          <textarea id="import-text" rows="5" placeholder="在此粘贴学生名单，每行一个…" class="w-full bg-gray-50 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 mb-3"></textarea>
+          <div class="flex items-center gap-3 mb-4">
+            <label class="text-sm text-brand-600 bg-brand-50 px-3 py-2 rounded-xl cursor-pointer">
+              选择文件 (.csv/.txt)
+              <input id="import-file" type="file" accept=".csv,.txt,text/plain" class="hidden">
+            </label>
+            <span class="text-xs text-gray-400">也可从文件导入</span>
+          </div>
+          <div class="flex gap-3">
+            <button class="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 font-medium" onclick="closeImport()">取消</button>
+            <button class="flex-1 py-3 rounded-xl bg-brand-600 text-white font-medium" onclick="doImport()">导入</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 学生子页面 -->
+      <div id="student-subpage" class="hidden fixed inset-0 bg-gray-50 z-20 pb-32 overflow-y-auto">
+        <div class="bg-white/85 backdrop-blur-lg px-4 pt-8 pb-4 sticky top-0 z-30 border-b border-gray-200/60 flex items-center">
+          <button class="mr-3 p-1 -ml-1" onclick="hideStudentSubpage()">
+            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          </button>
+          <h2 class="text-lg font-bold text-gray-900" id="subpage-title">成绩管理</h2>
+        </div>
+        <div class="p-4" id="subpage-content">
+          <!-- 动态生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 待办页面 ========== -->
+    <div id="page-todo" class="page">
+      <div class="bg-white/85 backdrop-blur-lg px-5 pt-8 pb-4 sticky top-0 z-10 border-b border-gray-200/60">
+        <h1 class="text-[22px] font-bold text-gray-900 mb-3 tracking-tight">待办提醒</h1>
+        <div class="class-bar mb-3"></div>
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-gray-500" id="todo-count">3 项待完成</span>
+          <button class="text-sm text-brand-600 bg-brand-50 px-3 py-1 rounded-full" onclick="addTodo()">+ 添加</button>
+        </div>
+      </div>
+
+      <div class="px-4 mt-4 pb-32">
+        <div class="space-y-2" id="todo-list">
+          <!-- 动态生成 -->
+        </div>
+
+        <!-- 数据备份 -->
+        <div class="bg-white rounded-2xl shadow-sm p-4 mt-4">
+          <h2 class="font-bold text-gray-800 mb-1">数据备份</h2>
+          <p class="text-xs text-gray-500 mb-3 leading-relaxed">所有数据只保存在本机，不上传。换手机或清理应用数据前，请先导出备份。</p>
+          <div class="flex gap-2">
+            <button class="flex-1 py-2.5 rounded-xl text-sm text-white bg-brand-600 font-medium" onclick="exportBackup()">导出备份</button>
+            <button class="flex-1 py-2.5 rounded-xl text-sm text-brand-600 bg-brand-50 font-medium" onclick="document.getElementById('restore-file').click()">恢复备份</button>
+          </div>
+          <input id="restore-file" type="file" accept=".json,application/json" class="hidden" onchange="importBackup(this)">
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 底部导航 ========== -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-lg border-t border-gray-200/70 safe-bottom z-50">
+      <div class="max-w-md mx-auto flex justify-around items-center pt-1.5 pb-1">
+        <button class="nav-btn active flex flex-col items-center py-1 px-3" data-page="home">
+          <span class="nav-ico px-4 py-1 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></span>
+          <span class="text-[11px] mt-0.5 font-medium">首页</span>
+        </button>
+        <button class="nav-btn flex flex-col items-center py-1 px-3" data-page="schedule">
+          <span class="nav-ico px-4 py-1 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></span>
+          <span class="text-[11px] mt-0.5 font-medium">课表</span>
+        </button>
+        <button class="nav-btn flex flex-col items-center py-1 px-3" data-page="homework">
+          <span class="nav-ico px-4 py-1 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></span>
+          <span class="text-[11px] mt-0.5 font-medium">作业</span>
+        </button>
+        <button class="nav-btn flex flex-col items-center py-1 px-3" data-page="student">
+          <span class="nav-ico px-4 py-1 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></span>
+          <span class="text-[11px] mt-0.5 font-medium">学生</span>
+        </button>
+        <button class="nav-btn flex flex-col items-center py-1 px-3" data-page="todo">
+          <span class="nav-ico px-4 py-1 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg></span>
+          <span class="text-[11px] mt-0.5 font-medium">待办</span>
+        </button>
+      </div>
+    </nav>
+
+  </div>
+
+  <script>
+    // ===== 默认 40 名学生 =====
+    function buildDefaultStudents() {
+      const list = [
+        { id: 1, name: '王一诺', avatar: '王', group: 1, tags: ['近视'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'unsubmitted', correct: 'none' } } },
+        { id: 2, name: '张梓涵', avatar: '张', group: 1, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'need' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 3, name: '李子轩', avatar: '李', group: 1, tags: ['重点关注'], homeworkRecords: { hw_1: { status: 'unsubmitted', correct: 'none' }, hw_2: { status: 'makeup', correct: 'corrected' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 4, name: '刘沐晨', avatar: '刘', group: 1, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'exempt', correct: 'none' } } },
+        { id: 5, name: '陈雨桐', avatar: '陈', group: 1, tags: ['过敏体质'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'corrected' }, hw_2: { status: 'unsubmitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 6, name: '杨浩宇', avatar: '杨', group: 1, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'need' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 7, name: '黄思睿', avatar: '黄', group: 1, tags: ['体育特长'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'unsubmitted', correct: 'none' } } },
+        { id: 8, name: '周诗涵', avatar: '周', group: 2, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'corrected' } } },
+        { id: 9, name: '吴俊熙', avatar: '吴', group: 2, tags: ['近视'], homeworkRecords: { hw_1: { status: 'unsubmitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 10, name: '徐梦洁', avatar: '徐', group: 2, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'exempt', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 11, name: '孙嘉树', avatar: '孙', group: 2, tags: ['班干部'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'unsubmitted', correct: 'none' } } },
+        { id: 12, name: '马艺可', avatar: '马', group: 2, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'need' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 13, name: '朱子墨', avatar: '朱', group: 2, tags: ['重点关注'], homeworkRecords: { hw_1: { status: 'makeup', correct: 'corrected' }, hw_2: { status: 'unsubmitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 14, name: '胡欣怡', avatar: '胡', group: 3, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 15, name: '郭明泽', avatar: '郭', group: 3, tags: ['近视'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'unsubmitted', correct: 'need' } } },
+        { id: 16, name: '林语晨', avatar: '林', group: 3, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'corrected' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'exempt', correct: 'none' } } },
+        { id: 17, name: '何睿泽', avatar: '何', group: 3, tags: ['体育特长'], homeworkRecords: { hw_1: { status: 'unsubmitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 18, name: '罗雨萱', avatar: '罗', group: 3, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'need' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 19, name: '高子睿', avatar: '高', group: 3, tags: ['班干部'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'unsubmitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'corrected' } } },
+        { id: 20, name: '郑欣妍', avatar: '郑', group: 4, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 21, name: '梁浩然', avatar: '梁', group: 4, tags: ['过敏体质'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'makeup', correct: 'corrected' }, hw_3: { status: 'unsubmitted', correct: 'none' } } },
+        { id: 22, name: '谢诗琪', avatar: '谢', group: 4, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'need' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 23, name: '宋承宇', avatar: '宋', group: 4, tags: ['重点关注'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 24, name: '唐梓萱', avatar: '唐', group: 4, tags: [], homeworkRecords: { hw_1: { status: 'unsubmitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'corrected' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 25, name: '韩子墨', avatar: '韩', group: 4, tags: ['近视'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'unsubmitted', correct: 'none' } } },
+        { id: 26, name: '冯一诺', avatar: '冯', group: 5, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'exempt', correct: 'none' }, hw_3: { status: 'submitted', correct: 'need' } } },
+        { id: 27, name: '董俊凯', avatar: '董', group: 5, tags: ['体育特长'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 28, name: '曹雨薇', avatar: '曹', group: 5, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'corrected' }, hw_2: { status: 'unsubmitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 29, name: '彭思远', avatar: '彭', group: 5, tags: ['班干部'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 30, name: '于梦涵', avatar: '于', group: 5, tags: [], homeworkRecords: { hw_1: { status: 'unsubmitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'need' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 31, name: '邓明轩', avatar: '邓', group: 5, tags: ['重点关注'], homeworkRecords: { hw_1: { status: 'makeup', correct: 'corrected' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'unsubmitted', correct: 'none' } } },
+        { id: 32, name: '许子涵', avatar: '许', group: 6, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'corrected' } } },
+        { id: 33, name: '傅雨泽', avatar: '傅', group: 6, tags: ['近视'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 34, name: '沈佳琪', avatar: '沈', group: 6, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'need' }, hw_2: { status: 'unsubmitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 35, name: '曾浩然', avatar: '曾', group: 6, tags: ['过敏体质'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'exempt', correct: 'none' } } },
+        { id: 36, name: '廖梓睿', avatar: '廖', group: 6, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'unsubmitted', correct: 'need' } } },
+        { id: 37, name: '石雨彤', avatar: '石', group: 6, tags: ['体育特长'], homeworkRecords: { hw_1: { status: 'unsubmitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'corrected' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 38, name: '卢思琪', avatar: '卢', group: 6, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 39, name: '钱俊熙', avatar: '钱', group: 6, tags: ['班干部'], homeworkRecords: { hw_1: { status: 'submitted', correct: 'none' }, hw_2: { status: 'makeup', correct: 'corrected' }, hw_3: { status: 'submitted', correct: 'none' } } },
+        { id: 40, name: '孔艺萱', avatar: '孔', group: 6, tags: [], homeworkRecords: { hw_1: { status: 'submitted', correct: 'need' }, hw_2: { status: 'submitted', correct: 'none' }, hw_3: { status: 'submitted', correct: 'none' } } },
+      ];
+      // ===== 演示数据：两场数学成绩（供成绩趋势演示）+ 两条学生随记 =====
+      // 真实使用时在「待办」页恢复备份或清数据后，用自己的班级替换即可
+      list.forEach((s, i) => {
+        const base = 68 + (i * 7) % 27;
+        const delta = (i * 13) % 15 - 7;
+        s.scores = { ex_1: base, ex_2: Math.max(0, Math.min(100, base + delta)) };
+      });
+      const _nf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const _d1 = _nf(new Date(Date.now() - 86400000));
+      const _d3 = _nf(new Date(Date.now() - 3 * 86400000));
+      list[2].notes = [
+        { id: 2, date: _d1, text: '今天主动补交了练习册，约定这周继续盯住' },
+        { id: 1, date: _d3, text: '最近作业常要补交，聊过了，家里最近有事，多关注' }
+      ];
+      list[4].notes = [
+        { id: 3, date: _d1, text: '午餐虾过敏，已提醒配餐避开海鲜' }
+      ];
+      return list;
+    }
+
+    let students = buildDefaultStudents();
+
+    let groups = [
+      { id: 1, name: '第一组', leader: '王一诺' },
+      { id: 2, name: '第二组', leader: '周诗涵' },
+      { id: 3, name: '第三组', leader: '胡欣怡' },
+      { id: 4, name: '第四组', leader: '郑欣妍' },
+      { id: 5, name: '第五组', leader: '冯一诺' },
+      { id: 6, name: '第六组', leader: '许子涵' },
+    ];
+
+    const _today = new Date();
+    const _fmtDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const _todayStr = _fmtDate(_today);
+    const _yesterdayStr = _fmtDate(new Date(_today.getTime() - 86400000));
+
+    // ===== 成绩管理数据（按班级隔离，学生分数存于 student.scores） =====
+    let exams = [
+      { id: 'ex_1', name: '数学单元测', date: _yesterdayStr, fullScore: 100 },
+      { id: 'ex_2', name: '数学周测', date: _todayStr, fullScore: 100 }
+    ];
+    let currentExamId = 'ex_2';
+
+    // ===== 座位顺序（按格子存学生 id，null=空位；按班级隔离） =====
+    let seatOrder = [];
+
+    let homeworks = [
+      { id: 'hw_1', subject: '语文', title: '课文背诵', deadline: '今天 08:00', date: _todayStr },
+      { id: 'hw_2', subject: '数学', title: '练习册 P12-15', deadline: '昨天 12:00', date: _yesterdayStr },
+      { id: 'hw_3', subject: '英语', title: '单词默写 Unit 3', deadline: '今天 08:00', date: _todayStr }
+    ];
+    let currentHomeworkId = 'hw_1';
+    let currentHomeworkDate = _todayStr;
+    let currentHomeworkFilter = 'all';
+
+    const weekdays = ['周一', '周二', '周三', '周四', '周五'];
+    const weekdayDates = { '周一': 3, '周二': 4, '周三': 5, '周四': 6, '周五': 7 };
+
+    function buildBaseSchedule() {
+      const base = [
+        { period: 1, time: '08:00-08:40', subject: '语文', room: '501' },
+        { period: 2, time: '08:50-09:30', subject: '数学', room: '501' },
+        { period: 3, time: '09:40-10:20', subject: '英语', room: '501' },
+        { period: 4, time: '10:30-11:11', subject: '科学', room: '实验室' },
+        { period: 5, time: '14:00-14:40', subject: '班会', room: '501' },
+        { period: 6, time: '14:50-15:30', subject: '音乐', room: '音乐室' },
+      ];
+      const obj = {};
+      weekdays.forEach(d => { obj[d] = base.map(p => ({ ...p })); });
+      return obj;
+    }
+    // 原始课表：学校下发的只读基线
+    let scheduleOriginal = buildBaseSchedule();
+    // 当前课表：可编辑的工作副本（初始与原始一致，可增删改、标记调课）
+    let scheduleCurrent = buildBaseSchedule();
+    scheduleCurrent['周一'][2].note = '与体育调换'; // 示例：周一第3节为调课
+    let activeWeekday = '周一';
+
+    let todos = [
+      { id: 1, title: '检查红领巾佩戴', time: '07:30', done: true },
+      { id: 2, title: '批改语文作业', time: '12:00', done: false },
+      { id: 3, title: '与家长沟通小明近况', time: '17:30', done: false },
+    ];
+
+    // 调课留痕：填写/修改调课说明时自动生成，随本地数据持久化
+    let scheduleChanges = [];
+
+    let currentGroup = 1;
+    let scheduleMode = 'original';
+
+    // ===== 状态映射 =====
+    const statusMap = {
+      submitted: { label: '已交', class: 'bg-green-100 text-green-700' },
+      unsubmitted: { label: '未交', class: 'bg-gray-100 text-gray-600' },
+      makeup: { label: '补交', class: 'bg-yellow-100 text-yellow-700' },
+      exempt: { label: '免做', class: 'bg-brand-100 text-brand-700' },
+    };
+
+    const correctMap = {
+      none: { label: '无需订正', class: 'text-gray-400' },
+      need: { label: '需订正', class: 'text-red-500 font-medium' },
+      corrected: { label: '已订正', class: 'text-green-600' },
+    };
+
+    // ===== 日期/作业筛选工具 =====
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function getTodayStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    function getDateOffsetStr(offset) {
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    function formatDateLabel(dateStr) {
+      const today = getTodayStr();
+      const yesterday = getDateOffsetStr(-1);
+      const tomorrow = getDateOffsetStr(1);
+      if (dateStr === today) return '今天';
+      if (dateStr === yesterday) return '昨天';
+      if (dateStr === tomorrow) return '明天';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+      return `${d.getMonth() + 1}/${d.getDate()} ${week}`;
+    }
+    function formatDateShort(dateStr) {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    }
+    function getHomeworksByDate(dateStr) {
+      if (!dateStr) return homeworks.slice();
+      return homeworks.filter(h => h.date === dateStr);
+    }
+    function normalizeCurrentHomework() {
+      const list = getHomeworksByDate(currentHomeworkDate);
+      if (list.length && !list.find(h => h.id === currentHomeworkId)) {
+        currentHomeworkId = list[0].id;
+      } else if (!list.length) {
+        currentHomeworkId = null;
+      }
+    }
+
+    // ===== 页面切换 =====
+    function switchPage(pageName) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById(`page-${pageName}`).classList.add('active');
+      
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === pageName);
+      });
+      
+      if (pageName === 'home') renderHome();
+      window.scrollTo(0, 0);
+    }
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchPage(btn.dataset.page));
+    });
+
+    // ===== 作业页：获取学生当前作业状态（缺省兜底） =====
+    function getStudentHwStatus(student) {
+      const rec = student.homeworkRecords && student.homeworkRecords[currentHomeworkId];
+      return rec || { status: 'unsubmitted', correct: 'none' };
+    }
+
+    // ===== 作业页：渲染作业选择器 Tab =====
+    function renderHomeworkTabs() {
+      const container = document.getElementById('homework-tabs');
+      if (!container) return;
+      const list = getHomeworksByDate(currentHomeworkDate);
+      if (!list.length) {
+        container.innerHTML = '<span class="text-sm text-gray-400 py-2">该日期暂无作业</span>';
+        return;
+      }
+      container.innerHTML = list.map(hw => {
+        const isActive = hw.id === currentHomeworkId;
+        const unsub = students.filter(s => {
+          const rec = s.homeworkRecords && s.homeworkRecords[hw.id];
+          const st = rec || { status: 'unsubmitted', correct: 'none' };
+          return st.status === 'unsubmitted' || st.status === 'makeup';
+        }).length;
+        return `
+          <button class="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${isActive ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" onclick="switchHomework('${hw.id}')">
+            ${escAttr(hw.subject)}
+            ${unsub > 0 ? `<span class="ml-1 ${isActive ? 'bg-white text-brand-600' : 'bg-red-500 text-white'} text-xs px-1.5 py-0.5 rounded-full">${unsub}</span>` : ''}
+          </button>
+        `;
+      }).join('') + `
+        <button class="flex-shrink-0 w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg" onclick="addHomework()">+</button>
+      `;
+    }
+
+    // ===== 作业页：渲染日期选择条 =====
+    function renderHomeworkDateFilter() {
+      const container = document.getElementById('homework-date-filter');
+      if (!container) return;
+      const today = getTodayStr();
+      const yesterday = getDateOffsetStr(-1);
+      const dayBefore = getDateOffsetStr(-2);
+      const dates = [
+        { key: today, label: '今天 ' + formatDateShort(today) },
+        { key: yesterday, label: '昨天 ' + formatDateShort(yesterday) },
+        { key: dayBefore, label: '前天 ' + formatDateShort(dayBefore) },
+        { key: '', label: '全部' }
+      ];
+      const pickerValue = dates.find(d => d.key === currentHomeworkDate) ? '' : currentHomeworkDate;
+      container.innerHTML = dates.map(d => {
+        const isActive = currentHomeworkDate === d.key;
+        return `<button class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isActive ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" onclick="switchHomeworkDate('${d.key}')">${escAttr(d.label)}</button>`;
+      }).join('') + `
+        <div class="relative flex-shrink-0">
+          <input type="date" class="absolute inset-0 opacity-0 w-full cursor-pointer" onchange="switchHomeworkDate(this.value)" value="${pickerValue}">
+          <button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-gray-600 shadow-sm">选择日期</button>
+        </div>
+      `;
+    }
+
+    window.switchHomeworkDate = function(dateStr) {
+      currentHomeworkDate = dateStr;
+      currentHomeworkFilter = 'all';
+      normalizeCurrentHomework();
+      renderHomeworkDetail();
+    };
+
+    // ===== 作业页：渲染状态筛选 =====
+    function renderHomeworkStatusFilter() {
+      const container = document.getElementById('hw-status-filter');
+      if (!container) return;
+      const items = [
+        { key: 'all', label: '全部' },
+        { key: 'unsubmitted', label: '未交' },
+        { key: 'needCorrect', label: '需订正' }
+      ];
+      container.innerHTML = items.map(item => {
+        const isActive = currentHomeworkFilter === item.key;
+        let count = 0;
+        if (item.key === 'unsubmitted') {
+          count = students.filter(s => {
+            const st = getStudentHwStatus(s);
+            return st.status === 'unsubmitted' || st.status === 'makeup';
+          }).length;
+        } else if (item.key === 'needCorrect') {
+          count = students.filter(s => getStudentHwStatus(s).correct === 'need').length;
+        } else {
+          count = students.length;
+        }
+        return `<button class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${isActive ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}" onclick="switchHomeworkFilter('${item.key}')">${escAttr(item.label)} <span class="${isActive ? 'text-brand-600' : 'text-gray-400'}">${count}</span></button>`;
+      }).join('');
+    }
+
+    window.switchHomeworkFilter = function(filter) {
+      currentHomeworkFilter = filter;
+      renderHomeworkStatusFilter();
+      renderHomeworkStudentList();
+    };
+
+    // ===== 作业页：渲染当前作业卡片 + 小组 Tab + 学生列表 =====
+    function renderHomeworkDetail() {
+      renderHomeworkDateFilter();
+      renderHomeworkTabs();
+      renderHomeworkStatusFilter();
+      const detailContainer = document.getElementById('homework-detail');
+      if (!detailContainer) return;
+      const hw = currentHomeworkId ? homeworks.find(h => h.id === currentHomeworkId) : null;
+      const groupTabs = document.getElementById('hw-group-tabs');
+      const studentList = document.getElementById('hw-student-list');
+      if (!hw) {
+        detailContainer.innerHTML = `
+          <div class="text-center py-6">
+            <p class="text-sm text-gray-500 mb-3">该日期暂无作业</p>
+            <button class="text-sm text-brand-600 bg-brand-50 px-4 py-2 rounded-xl" onclick="addHomework()">+ 添加一份作业</button>
+          </div>
+        `;
+        if (groupTabs) groupTabs.innerHTML = '';
+        if (studentList) studentList.innerHTML = '';
+        return;
+      }
+      const totalUnsub = students.filter(s => {
+        const st = getStudentHwStatus(s);
+        return st.status === 'unsubmitted' || st.status === 'makeup';
+      }).length;
+      const totalNeedCorrect = students.filter(s => getStudentHwStatus(s).correct === 'need').length;
+      detailContainer.innerHTML = `
+        <div class="flex justify-between items-start mb-3">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <input class="text-lg font-bold text-gray-800 bg-transparent border-b border-transparent focus:border-brand-300 outline-none w-20" value="${escAttr(hw.subject)}" onchange="updateHomework('${hw.id}', 'subject', this.value)" placeholder="科目">
+              <span class="text-xs text-gray-400">·</span>
+              <input class="text-sm font-medium text-gray-600 bg-transparent border-b border-transparent focus:border-brand-300 outline-none flex-1" value="${escAttr(hw.title)}" onchange="updateHomework('${hw.id}', 'title', this.value)" placeholder="作业内容">
+            </div>
+            <div class="flex items-center gap-3 mt-2 flex-wrap">
+              <p class="text-xs text-gray-500">截止时间：<input class="bg-transparent border-b border-transparent focus:border-brand-300 outline-none" value="${escAttr(hw.deadline)}" onchange="updateHomework('${hw.id}', 'deadline', this.value)"></p>
+              <p class="text-xs text-gray-500">日期：<input type="date" class="bg-transparent border-b border-transparent focus:border-brand-300 outline-none text-gray-600" value="${hw.date || ''}" onchange="updateHomework('${hw.id}', 'date', this.value)"></p>
+            </div>
+          </div>
+          <div class="text-right ml-3 shrink-0">
+            <span class="text-sm font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg block mb-1">未交 ${totalUnsub}人</span>
+            ${totalNeedCorrect > 0 ? `<span class="text-sm font-medium text-red-600 bg-red-50 px-2 py-1 rounded-lg block">需订正 ${totalNeedCorrect}人</span>` : ''}
+            <button class="block mt-2 text-xs text-red-500" onclick="deleteHomework('${hw.id}')">删除作业</button>
+          </div>
+        </div>
+        <div class="mt-1">
+          <div class="flex justify-between text-xs text-gray-400 mb-1.5"><span>收缴进度</span><span class="font-medium text-gray-600">已交 ${students.length - totalUnsub}/${students.length}</span></div>
+          <div class="h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-green-500 rounded-full transition-all duration-300" style="width:${students.length ? Math.round((students.length - totalUnsub) / students.length * 100) : 0}%"></div></div>
+        </div>
+      `;
+      renderHomeworkGroupTabs();
+      renderHomeworkStudentList();
+    }
+
+    // ===== 作业页：渲染小组 Tab =====
+    function renderHomeworkGroupTabs() {
+      const container = document.getElementById('hw-group-tabs');
+      if (!container) return;
+      container.innerHTML = groups.map(group => {
+        const count = students.filter(s => {
+          if (s.group !== group.id) return false;
+          const st = getStudentHwStatus(s);
+          return st.status === 'unsubmitted' || st.status === 'makeup';
+        }).length;
+        return `
+          <button class="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${group.id === currentGroup ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" onclick="switchHomeworkGroup(${group.id})">
+            ${group.name}
+            ${count > 0 ? `<span class="ml-1 ${group.id === currentGroup ? 'bg-white text-brand-600' : 'bg-red-500 text-white'} text-xs px-1.5 py-0.5 rounded-full">${count}</span>` : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    // ===== 作业页：渲染学生作业列表 =====
+    function renderHomeworkStudentList() {
+      const container = document.getElementById('hw-student-list');
+      if (!container) return;
+      if (!currentHomeworkId) {
+        container.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">该日期暂无作业</p>';
+        return;
+      }
+      let groupStudents = students.filter(s => s.group === currentGroup);
+      if (currentHomeworkFilter === 'unsubmitted') {
+        groupStudents = groupStudents.filter(s => {
+          const st = getStudentHwStatus(s);
+          return st.status === 'unsubmitted' || st.status === 'makeup';
+        });
+      } else if (currentHomeworkFilter === 'needCorrect') {
+        groupStudents = groupStudents.filter(s => getStudentHwStatus(s).correct === 'need');
+      }
+      if (!groupStudents.length) {
+        container.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">该组暂无符合条件的学生</p>';
+        return;
+      }
+      container.innerHTML = groupStudents.map(student => {
+        const st = getStudentHwStatus(student);
+        return `
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+            <div class="flex items-center">
+              <div class="w-9 h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3">
+                ${student.avatar}
+              </div>
+              <div>
+                <p class="font-medium text-gray-800 text-sm">${student.name}</p>
+                <p class="text-xs ${correctMap[st.correct].class} cursor-pointer" onclick="toggleHomeworkCorrect(${student.id})">${correctMap[st.correct].label}</p>
+              </div>
+            </div>
+            <button class="px-3 py-1.5 rounded-lg text-xs font-medium ${statusMap[st.status].class}" onclick="toggleHomeworkStatus(${student.id})">
+              ${statusMap[st.status].label}
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.switchHomework = function(homeworkId) {
+      currentHomeworkId = homeworkId;
+      renderHomeworkDetail();
+    };
+
+    window.switchHomeworkGroup = function(groupId) {
+      currentGroup = groupId;
+      renderHomeworkGroupTabs();
+      renderHomeworkStudentList();
+    };
+
+    window.toggleHomeworkStatus = function(studentId) {
+      if (!currentHomeworkId) return;
+      const student = students.find(s => s.id === studentId);
+      if (!student.homeworkRecords) student.homeworkRecords = {};
+      if (!student.homeworkRecords[currentHomeworkId]) {
+        student.homeworkRecords[currentHomeworkId] = { status: 'unsubmitted', correct: 'none' };
+      }
+      const rec = student.homeworkRecords[currentHomeworkId];
+      const statusOrder = ['submitted', 'unsubmitted', 'makeup', 'exempt'];
+      const currentIndex = statusOrder.indexOf(rec.status);
+      rec.status = statusOrder[(currentIndex + 1) % statusOrder.length];
+      persist();
+      renderHomeworkDetail();
+    };
+
+    window.toggleHomeworkCorrect = function(studentId) {
+      if (!currentHomeworkId) return;
+      const student = students.find(s => s.id === studentId);
+      if (!student.homeworkRecords) student.homeworkRecords = {};
+      if (!student.homeworkRecords[currentHomeworkId]) {
+        student.homeworkRecords[currentHomeworkId] = { status: 'unsubmitted', correct: 'none' };
+      }
+      const rec = student.homeworkRecords[currentHomeworkId];
+      const correctOrder = ['none', 'need', 'corrected'];
+      const currentIndex = correctOrder.indexOf(rec.correct);
+      rec.correct = correctOrder[(currentIndex + 1) % correctOrder.length];
+      persist();
+      renderHomeworkDetail();
+    };
+
+    window.batchSetHomeworkStatus = function(status) {
+      if (!currentHomeworkId) return;
+      const groupStudents = students.filter(s => s.group === currentGroup);
+      groupStudents.forEach(student => {
+        if (!student.homeworkRecords) student.homeworkRecords = {};
+        if (!student.homeworkRecords[currentHomeworkId]) {
+          student.homeworkRecords[currentHomeworkId] = { status: 'unsubmitted', correct: 'none' };
+        }
+        student.homeworkRecords[currentHomeworkId].status = status;
+      });
+      persist();
+      renderHomeworkDetail();
+    };
+
+    window.batchSetHomeworkCorrect = function(correct) {
+      if (!currentHomeworkId) return;
+      const groupStudents = students.filter(s => s.group === currentGroup);
+      groupStudents.forEach(student => {
+        if (!student.homeworkRecords) student.homeworkRecords = {};
+        if (!student.homeworkRecords[currentHomeworkId]) {
+          student.homeworkRecords[currentHomeworkId] = { status: 'unsubmitted', correct: 'none' };
+        }
+        student.homeworkRecords[currentHomeworkId].correct = correct;
+      });
+      persist();
+      renderHomeworkDetail();
+    };
+
+    window.addHomework = async function() {
+      const vals = await sheetInput({
+        title: '添加作业',
+        fields: [
+          { key: 'subject', label: '科目', value: '语文' },
+          { key: 'title', label: '作业内容', placeholder: '如 练习册 P12-15' },
+          { key: 'deadline', label: '截止时间', value: '今天 12:00' }
+        ],
+        okText: '添加'
+      });
+      if (!vals) return;
+      const subject = vals.subject.trim();
+      if (!subject) return;
+      const title = vals.title.trim() || '新作业';
+      const deadline = vals.deadline.trim() || '今天 12:00';
+      const id = 'hw_' + Date.now();
+      const date = currentHomeworkDate || getTodayStr();
+      homeworks.push({ id, subject, title, deadline, date });
+      students.forEach(s => {
+        if (!s.homeworkRecords) s.homeworkRecords = {};
+        s.homeworkRecords[id] = { status: 'unsubmitted', correct: 'none' };
+      });
+      currentHomeworkId = id;
+      renderHomeworkDetail();
+      persist();
+    };
+
+    window.deleteHomework = async function(homeworkId) {
+      if (homeworks.length <= 1) { alert('至少保留一份作业'); return; }
+      const hw = homeworks.find(h => h.id === homeworkId);
+      if (!(await sheetConfirm({ title: '删除作业', message: '确定删除「' + hw.subject + ' · ' + hw.title + '」？对应的学生提交记录也将删除。', okText: '删除', danger: true }))) return;
+      homeworks = homeworks.filter(h => h.id !== homeworkId);
+      students.forEach(s => { if (s.homeworkRecords) delete s.homeworkRecords[homeworkId]; });
+      if (currentHomeworkId === homeworkId) currentHomeworkId = homeworks[0].id;
+      renderHomeworkDetail();
+      persist();
+    };
+
+    window.updateHomework = function(homeworkId, field, value) {
+      const hw = homeworks.find(h => h.id === homeworkId);
+      if (hw) { hw[field] = value; persist(); }
+    };
+
+    // ===== 渲染待办 =====
+    function renderTodos() {
+      persist();
+      const container = document.getElementById('todo-list');
+      const countEl = document.getElementById('todo-count');
+      const pending = todos.filter(t => !t.done).length;
+      if (countEl) countEl.textContent = `${pending} 项待完成`;
+      container.innerHTML = todos.map(todo => `
+        <div class="bg-white rounded-xl p-3 shadow-sm flex items-center gap-2">
+          <button class="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${todo.done ? 'bg-green-500 border-green-500' : 'border-gray-300'}" onclick="toggleTodo(${todo.id})">
+            ${todo.done ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+          </button>
+          <input class="flex-1 min-w-0 text-sm bg-transparent border-b border-transparent focus:border-brand-300 outline-none ${todo.done ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}" value="${escAttr(todo.title)}" onchange="updateTodo(${todo.id}, 'title', this.value)" placeholder="待办内容">
+          <input type="time" class="text-xs text-gray-500 bg-gray-50 rounded-lg px-1.5 py-1 flex-shrink-0" value="${escAttr(todo.time)}" onchange="updateTodo(${todo.id}, 'time', this.value)">
+          <button class="text-gray-300 hover:text-red-400 p-1 flex-shrink-0" onclick="removeTodo(${todo.id})" aria-label="删除">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    window.toggleTodo = function(todoId) {
+      const todo = todos.find(t => t.id === todoId);
+      todo.done = !todo.done;
+      renderTodos();
+    };
+
+    window.updateTodo = function(todoId, field, value) {
+      const todo = todos.find(t => t.id === todoId);
+      if (!todo) return;
+      todo[field] = value;
+    };
+
+    window.removeTodo = function(todoId) {
+      todos = todos.filter(t => t.id !== todoId);
+      renderTodos();
+    };
+
+    window.addTodo = function() {
+      const maxId = todos.reduce((m, t) => Math.max(m, t.id), 0);
+      todos.push({ id: maxId + 1, title: '', time: '08:00', done: false });
+      renderTodos();
+    };
+
+    // ===== 学生筛选 chips（全部/需关注/成绩提升/健康信息） =====
+    let studentFilter = 'all';
+
+    window.setStudentFilter = function(key) {
+      studentFilter = key;
+      renderStudentFilters();
+      renderStudentList();
+    };
+
+    // 学生成绩汇总：历次考试（按得分率折算）的平均分与最近两场涨跌
+    function studentScoreSummary(s) {
+      const recs = sortedExams()
+        .map(e => ({ e: e, v: s.scores ? s.scores[e.id] : undefined }))
+        .filter(r => typeof r.v === 'number');
+      if (!recs.length) return { avg: null, delta: null, recs: recs };
+      const avg = Math.round(recs.reduce((sum, r) => sum + r.v / r.e.fullScore * 100, 0) / recs.length * 10) / 10;
+      let delta = null;
+      if (recs.length >= 2) {
+        const a = recs[recs.length - 2], b = recs[recs.length - 1];
+        delta = Math.round((b.v / b.e.fullScore - a.v / a.e.fullScore) * 100);
+      }
+      return { avg: avg, delta: delta, recs: recs };
+    }
+
+    function renderStudentFilters() {
+      const box = document.getElementById('student-filter-chips');
+      if (!box) return;
+      const focusCnt = students.filter(s => (s.tags || []).some(t => t.indexOf('关注') !== -1)).length;
+      const healthCnt = students.filter(s => (s.tags || []).some(t => t.indexOf('近视') !== -1 || t.indexOf('过敏') !== -1)).length;
+      const upCnt = students.filter(s => { const d = studentScoreSummary(s).delta; return d !== null && d > 0; }).length;
+      const chips = [
+        { key: 'all', label: '全部', count: students.length, icon: '' },
+        { key: 'focus', label: '需关注', count: focusCnt, icon: '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' },
+        { key: 'up', label: '成绩提升', count: upCnt, icon: '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>' },
+        { key: 'health', label: '健康信息', count: healthCnt, icon: '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>' }
+      ];
+      box.innerHTML = chips.map(c => `
+        <button class="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${studentFilter === c.key ? 'bg-brand-600 text-white shadow-sm' : 'bg-white text-gray-600 shadow-sm'}" onclick="setStudentFilter('${c.key}')">
+          ${c.icon}${c.label}（${c.count}）
+        </button>
+      `).join('');
+    }
+
+    // ===== 渲染学生列表（搜索 + 筛选；卡片含学号/座位号/近期平均成绩） =====
+    function renderStudentList() {
+      persist();
+      const container = document.getElementById('student-list');
+      const countEl = document.getElementById('student-count');
+      const searchEl = document.getElementById('student-search');
+      const q = searchEl ? searchEl.value.trim() : '';
+      // 座位号来自座位表；失效时先按名单兜底重排（与座位页同一套规则）
+      if (!Array.isArray(seatOrder) || seatOrder.length !== seatRows * seatCols || !students.every(s => seatOrder.indexOf(s.id) !== -1)) {
+        seatOrder = defaultSeatOrder();
+      }
+      let view = students;
+      if (studentFilter === 'focus') view = view.filter(s => (s.tags || []).some(t => t.indexOf('关注') !== -1));
+      else if (studentFilter === 'health') view = view.filter(s => (s.tags || []).some(t => t.indexOf('近视') !== -1 || t.indexOf('过敏') !== -1));
+      else if (studentFilter === 'up') view = view.filter(s => { const d = studentScoreSummary(s).delta; return d !== null && d > 0; });
+      if (q) {
+        view = view.filter(s =>
+          s.name.indexOf(q) !== -1 ||
+          (s.tags || []).some(t => t.indexOf(q) !== -1) ||
+          String(s.group) === q ||
+          ('第' + s.group + '组') === q
+        );
+      }
+      if (countEl) countEl.textContent = view.length !== students.length ? `（${view.length}/${students.length}人）` : `（${students.length}人）`;
+      if (!view.length) {
+        container.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">没有匹配的学生</p>';
+        return;
+      }
+      container.innerHTML = view.map(student => {
+        const sum = studentScoreSummary(student);
+        const seatIdx = seatOrder.indexOf(student.id);
+        const isFocus = (student.tags || []).some(t => t.indexOf('关注') !== -1);
+        const tagChips = (student.tags || []).slice(0, 2).map(t => {
+          const cls = t.indexOf('近视') !== -1 ? 'bg-red-50 text-red-500' : t.indexOf('过敏') !== -1 ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-500';
+          return `<span class="text-[10px] px-1 py-0.5 rounded ${cls}">${t}</span>`;
+        }).join('');
+        const deltaHtml = sum.delta === null ? '' :
+          sum.delta > 0 ? `<p class="text-[10px] text-green-600 mt-0.5">↑ ${sum.delta}分</p>` :
+          sum.delta < 0 ? `<p class="text-[10px] text-red-500 mt-0.5">↓ ${Math.abs(sum.delta)}分</p>` :
+          '<p class="text-[10px] text-gray-400 mt-0.5">→ 持平</p>';
+        return `
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm flex items-center cursor-pointer active:scale-[0.99] transition-transform ${isFocus ? 'border border-brand-200' : ''}" onclick="showStudentDetail(${student.id})">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-lg font-bold shrink-0">${student.avatar}</div>
+          <div class="ml-3 flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <p class="font-bold text-gray-900">${student.name}</p>
+              <span class="text-[10px] text-brand-600 bg-brand-50 rounded px-1 py-0.5">学号 ${String(student.id).padStart(2, '0')}</span>
+            </div>
+            <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+              <span class="text-[11px] text-gray-400">座位号 ${seatIdx >= 0 ? seatIdx + 1 : '—'}</span>
+              ${tagChips}
+              ${student.notes && student.notes.length ? `<span class="text-[10px] text-brand-400">随记 ${student.notes.length}</span>` : ''}
+            </div>
+          </div>
+          <div class="text-right shrink-0 mr-1.5">
+            <p class="text-[9px] text-gray-400">近期平均成绩</p>
+            <p class="text-2xl font-bold ${sum.avg === null ? 'text-gray-300' : sum.delta !== null && sum.delta < 0 ? 'text-orange-500' : 'text-brand-600'}">${sum.avg === null ? '—' : sum.avg + '<span class="text-xs font-normal">分</span>'}</p>
+            ${deltaHtml}
+          </div>
+          <svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </div>`;
+      }).join('');
+    }
+
+    // ===== 成绩管理 =====
+    function currentExam() {
+      return exams.find(e => e.id === currentExamId) || null;
+    }
+
+    function getScore(s, examId) {
+      const v = s.scores && s.scores[examId];
+      return (typeof v === 'number') ? v : '';
+    }
+
+    function renderGrade() {
+      persist();
+      const tabs = document.getElementById('grade-exam-tabs');
+      if (!tabs) return;
+      const statsEl = document.getElementById('grade-stats');
+      const listEl = document.getElementById('grade-list');
+      tabs.innerHTML = exams.map(e => `
+        <button class="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${e.id === currentExamId ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" onclick="switchExam('${e.id}')">${escAttr(e.name)}</button>
+      `).join('') + `
+        <button class="flex-shrink-0 w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg" onclick="addExam()">+</button>
+      `;
+      const ex = currentExam();
+      if (!ex) {
+        if (statsEl) statsEl.textContent = '';
+        if (listEl) listEl.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">暂无考试，点击 + 添加</p>';
+        return;
+      }
+      const entered = students.filter(s => typeof (s.scores || {})[ex.id] === 'number');
+      const avg = entered.length ? (entered.reduce((sum, s) => sum + s.scores[ex.id], 0) / entered.length).toFixed(1) : '—';
+      if (statsEl) statsEl.textContent = `满分 ${ex.fullScore} · ${ex.date} · 已录 ${entered.length}/${students.length} 人 · 平均 ${avg} 分`;
+      if (listEl) listEl.innerHTML = students.map(s => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <div class="flex items-center">
+            <div class="w-8 h-8 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white text-sm mr-3">${s.avatar}</div>
+            <span class="text-sm text-gray-800">${s.name}</span>
+          </div>
+          <input type="number" min="0" max="${ex.fullScore}" value="${getScore(s, ex.id)}" placeholder="—" class="w-20 text-right bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-brand-500" onchange="setScore(${s.id}, this.value)">
+        </div>
+      `).join('');
+    }
+
+    window.switchExam = function(id) {
+      currentExamId = id;
+      renderGrade();
+    };
+
+    window.addExam = async function() {
+      const vals = await sheetInput({
+        title: '添加考试',
+        fields: [
+          { key: 'name', label: '考试名称', placeholder: '如 数学单元测' },
+          { key: 'full', label: '满分', value: '100', type: 'number' }
+        ],
+        okText: '添加'
+      });
+      if (!vals) return;
+      const name = vals.name.trim();
+      if (!name) return;
+      const full = parseInt(vals.full, 10);
+      if (!full || full <= 0) return;
+      const id = 'ex_' + Date.now();
+      exams.push({ id: id, name: name.trim(), date: getTodayStr(), fullScore: full });
+      currentExamId = id;
+      renderGrade();
+    };
+
+    window.setScore = function(studentId, value) {
+      const ex = currentExam();
+      if (!ex) return;
+      const s = students.find(x => x.id === studentId);
+      if (!s) return;
+      if (!s.scores) s.scores = {};
+      const v = String(value).trim();
+      if (v === '') {
+        delete s.scores[ex.id];
+      } else {
+        let n = Number(v);
+        if (isNaN(n)) return;
+        n = Math.max(0, Math.min(ex.fullScore, n));
+        s.scores[ex.id] = n;
+      }
+      persist();
+      renderGrade();
+    };
+
+    window.deleteExam = async function() {
+      const ex = currentExam();
+      if (!ex) return;
+      if (!(await sheetConfirm({ title: '删除考试', message: '确定删除「' + ex.name + '」？对应的成绩记录也将删除。', okText: '删除', danger: true }))) return;
+      exams = exams.filter(e => e.id !== ex.id);
+      students.forEach(s => { if (s.scores) delete s.scores[ex.id]; });
+      currentExamId = exams.length ? exams[0].id : null;
+      renderGrade();
+    };
+
+    window.exportGrades = function() {
+      const ex = currentExam();
+      if (!ex) return;
+      let text = '【' + currentClassName() + '】' + ex.name + ' 成绩单\n';
+      text += '满分 ' + ex.fullScore + ' · ' + ex.date + '\n\n';
+      students.forEach((s, i) => {
+        const v = getScore(s, ex.id);
+        text += (i + 1) + '. ' + s.name + '：' + (v === '' ? '未录入' : v) + '\n';
+      });
+      exportFile(currentClassName() + '_' + ex.name + '_成绩单.txt', text);
+    };
+
+    // ===== 学生随记（每人一档：日期+一句话，随手记；存于 student.notes，随班级隔离与备份） =====
+    let currentNotesStudentId = null;
+
+    window.showStudentNotes = function(studentId) {
+      const s = students.find(x => x.id === studentId);
+      if (!s) return;
+      currentNotesStudentId = studentId;
+      document.getElementById('subpage-title').textContent = s.name + ' · 随记';
+      document.getElementById('subpage-content').innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm p-4 mb-4 flex items-center">
+          <div class="w-10 h-10 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white font-medium mr-3">${s.avatar}</div>
+          <div>
+            <p class="font-medium text-gray-800">${s.name}</p>
+            <div class="flex gap-1 mt-1">
+              ${(s.tags || []).map(tag => `<span class="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-600">${tag}</span>`).join('')}
+              <span class="text-xs text-gray-400">第${s.group}组</span>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
+          <div class="flex gap-2">
+            <input id="note-input" class="flex-1 min-w-0 bg-gray-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="随手记一笔：这孩子今天怎么了…" onkeydown="if(event.key==='Enter')addNote()">
+            <button class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-medium shrink-0" onclick="addNote()">记一笔</button>
+          </div>
+        </div>
+        <div class="space-y-2" id="notes-list"></div>
+      `;
+      openSubpagePanel();
+      document.body.style.overflow = 'hidden';
+      renderNotes();
+    };
+
+    function renderNotes() {
+      const listEl = document.getElementById('notes-list');
+      if (!listEl) return;
+      const s = students.find(x => x.id === currentNotesStudentId);
+      const notes = (s && Array.isArray(s.notes)) ? s.notes : [];
+      if (!notes.length) {
+        listEl.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">还没有随记，随手记一笔，时间久了就有数了</p>';
+        return;
+      }
+      listEl.innerHTML = notes.map(n => `
+        <div class="bg-white rounded-xl p-3 shadow-sm">
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-gray-400">${formatDateLabel(n.date)}</span>
+            <button class="text-gray-300 hover:text-red-400 p-1" onclick="deleteNote(${n.id})" aria-label="删除">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+          <p class="text-sm text-gray-800 mt-1">${escAttr(n.text)}</p>
+        </div>
+      `).join('');
+    }
+
+    window.addNote = function() {
+      const input = document.getElementById('note-input');
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text) return;
+      const s = students.find(x => x.id === currentNotesStudentId);
+      if (!s) return;
+      if (!Array.isArray(s.notes)) s.notes = [];
+      s.notes.unshift({ id: Date.now(), date: getTodayStr(), text: text });
+      input.value = '';
+      renderNotes();
+      renderStudentList();
+      persist();
+    };
+
+    window.deleteNote = function(noteId) {
+      const s = students.find(x => x.id === currentNotesStudentId);
+      if (!s || !Array.isArray(s.notes)) return;
+      s.notes = s.notes.filter(n => n.id !== noteId);
+      renderNotes();
+      renderStudentList();
+      persist();
+    };
+
+    // ===== 成绩趋势（最近两场有成绩的考试对比 + 个人历次记录；跨考试按得分率折算） =====
+    let gradeView = 'entry';
+    let trendStudentId = null;
+
+    window.switchGradeView = function(v) {
+      gradeView = v;
+      const entryBtn = document.getElementById('gv-btn-entry');
+      const trendBtn = document.getElementById('gv-btn-trend');
+      if (!entryBtn || !trendBtn) return;
+      const activeCls = 'flex-1 py-2 text-sm font-medium rounded-lg bg-white text-brand-600 shadow-sm';
+      const idleCls = 'flex-1 py-2 text-sm font-medium rounded-lg text-gray-600';
+      entryBtn.className = v === 'entry' ? activeCls : idleCls;
+      trendBtn.className = v === 'trend' ? activeCls : idleCls;
+      document.getElementById('grade-entry-view').classList.toggle('hidden', v !== 'entry');
+      document.getElementById('grade-trend-view').classList.toggle('hidden', v !== 'trend');
+      if (v === 'entry') renderGrade();
+      else { trendStudentId = null; renderGradeTrend(); }
+    };
+
+    window.showStudentTrend = function(studentId) {
+      trendStudentId = studentId;
+      renderGradeTrend();
+    };
+
+    window.backTrendOverview = function() {
+      trendStudentId = null;
+      renderGradeTrend();
+    };
+
+    function sortedExams() {
+      return exams.map((e, i) => ({ e: e, i: i }))
+        .sort((a, b) => a.e.date === b.e.date ? a.i - b.i : (a.e.date < b.e.date ? -1 : 1))
+        .map(x => x.e);
+    }
+
+    function trendBadge(diff) {
+      if (diff > 0) return `<span class="text-xs font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700">↑ +${diff}</span>`;
+      if (diff < 0) return `<span class="text-xs font-medium px-1.5 py-0.5 rounded bg-red-100 text-red-600">↓ ${diff}</span>`;
+      return '<span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">→ 0</span>';
+    }
+
+    function renderGradeTrend() {
+      const box = document.getElementById('grade-trend-content');
+      if (!box) return;
+      persist();
+      // 个人历次成绩记录
+      if (trendStudentId) {
+        const s = students.find(x => x.id === trendStudentId);
+        if (!s) { trendStudentId = null; renderGradeTrend(); return; }
+        const recs = sortedExams()
+          .map(e => ({ e: e, v: s.scores ? s.scores[e.id] : undefined }))
+          .filter(r => typeof r.v === 'number');
+        let html = `
+          <button class="text-sm text-brand-600 mb-3" onclick="backTrendOverview()">‹ 返回全班对比</button>
+          <div class="flex items-center mb-3">
+            <div class="w-8 h-8 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white text-sm mr-2">${s.avatar}</div>
+            <p class="font-bold text-gray-800">${s.name} <span class="text-xs font-normal text-gray-400">历次成绩 · 按得分率折算</span></p>
+          </div>
+        `;
+        if (!recs.length) {
+          box.innerHTML = html + '<p class="text-sm text-gray-400 text-center py-4">还没有成绩记录</p>';
+          return;
+        }
+        html += '<div class="space-y-2">' + recs.map((r, idx) => {
+          const pct = Math.round(r.v / r.e.fullScore * 100);
+          const prev = idx > 0 ? recs[idx - 1] : null;
+          const diff = prev ? Math.round((r.v / r.e.fullScore - prev.v / prev.e.fullScore) * 100) : null;
+          return `
+            <div class="p-3 bg-gray-50 rounded-xl">
+              <div class="flex justify-between items-center">
+                <div>
+                  <p class="text-sm font-medium text-gray-800">${escAttr(r.e.name)}</p>
+                  <p class="text-xs text-gray-400">${formatDateShort(r.e.date)} · 满分 ${r.e.fullScore}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-bold text-gray-800">${r.v}</span>
+                  ${diff === null ? '<span class="text-xs text-gray-300">首次</span>' : trendBadge(diff)}
+                </div>
+              </div>
+              <div class="h-1.5 bg-gray-200 rounded-full mt-2"><div class="h-1.5 bg-brand-500 rounded-full" style="width:${pct}%"></div></div>
+            </div>
+          `;
+        }).join('') + '</div>';
+        box.innerHTML = html;
+        return;
+      }
+      // 全班对比：最近两场有成绩的考试
+      const scored = sortedExams().filter(e => students.some(s => typeof (s.scores || {})[e.id] === 'number'));
+      if (scored.length < 2) {
+        box.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">再录一场考试的成绩，就能看到谁提升、谁下降了</p>';
+        return;
+      }
+      const latest = scored[scored.length - 1];
+      const prev = scored[scored.length - 2];
+      const rows = students.map(s => {
+        const lv = s.scores ? s.scores[latest.id] : undefined;
+        const pv = s.scores ? s.scores[prev.id] : undefined;
+        if (typeof lv !== 'number' || typeof pv !== 'number') return null;
+        return { s: s, lv: lv, pv: pv, diff: Math.round((lv / latest.fullScore - pv / prev.fullScore) * 100) };
+      }).filter(Boolean).sort((a, b) => b.diff - a.diff);
+      box.innerHTML = `
+        <p class="text-xs text-gray-500 mb-3 leading-relaxed">《${escAttr(prev.name)}》→《${escAttr(latest.name)}》· 按得分率折算对比 · 点学生看历次记录</p>
+        <div class="space-y-2">
+          ${rows.map(r => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer active:scale-[0.99] transition-transform" onclick="showStudentTrend(${r.s.id})">
+              <div class="flex items-center">
+                <div class="w-8 h-8 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white text-sm mr-3">${r.s.avatar}</div>
+                <span class="text-sm text-gray-800">${r.s.name}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">${r.pv} → ${r.lv}</span>
+                ${trendBadge(r.diff)}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // ===== 学生详情底弹层（成绩走势图 + 健康信息 + 真实统计入口） =====
+    let currentDetailStudentId = null;
+
+    // 历次成绩折线图（SVG，按得分率折算到 0-100）
+    function trendChartSvg(recs) {
+      if (!recs.length) return '';
+      const W = 320, H = 120, padL = 26, padR = 14, padT = 16, padB = 24;
+      const n = recs.length;
+      const x = i => n === 1 ? W / 2 : padL + i * (W - padL - padR) / (n - 1);
+      const y = pct => padT + (1 - pct / 100) * (H - padT - padB);
+      const pts = recs.map((r, i) => ({ x: x(i), y: y(r.pct), r: r }));
+      const line = pts.map(p => p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+      const area = `M ${pts[0].x.toFixed(1)},${H - padB} L ` + line.replace(/ /g, ' L ') + ` L ${pts[n - 1].x.toFixed(1)},${H - padB} Z`;
+      const grid = [50, 100].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${W - padR}" y2="${y(g)}" stroke="#f0f1f3" stroke-width="1"/>`).join('');
+      return `
+        <svg viewBox="0 0 ${W} ${H}" class="w-full h-auto">
+          <defs>
+            <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2e6bff" stop-opacity="0.18"/>
+              <stop offset="1" stop-color="#2e6bff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          ${grid}
+          <path d="${area}" fill="url(#trendFill)"/>
+          ${n > 1 ? `<polyline points="${line}" fill="none" stroke="#2e6bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+          ${pts.map(p => `
+            <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="#fff" stroke="#2e6bff" stroke-width="2"/>
+            <text x="${p.x.toFixed(1)}" y="${(p.y - 7).toFixed(1)}" text-anchor="middle" font-size="9" fill="#374151">${p.r.v}</text>
+            <text x="${p.x.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="8" fill="#9ca3af">${escAttr(p.r.e.name.slice(0, 4))}</text>
+          `).join('')}
+        </svg>
+      `;
+    }
+
+    window.showStudentDetail = function(studentId) {
+      const s = students.find(x => x.id === studentId);
+      if (!s) return;
+      currentDetailStudentId = studentId;
+      const sum = studentScoreSummary(s);
+      const seatIdx = seatOrder.indexOf(s.id);
+      const seatText = seatIdx >= 0 ? `第${Math.floor(seatIdx / seatCols) + 1}排 · 第${seatIdx % seatCols + 1}列` : '暂未排座';
+      let unsubCnt = 0, needCnt = 0;
+      homeworks.forEach(hw => {
+        const rec = s.homeworkRecords && s.homeworkRecords[hw.id];
+        const st = rec ? rec.status : 'unsubmitted';
+        if (st === 'unsubmitted' || st === 'makeup') unsubCnt++;
+        if (rec && rec.correct === 'need') needCnt++;
+      });
+      const notes = Array.isArray(s.notes) ? s.notes : [];
+      const isFocus = (s.tags || []).indexOf('重点关注') !== -1;
+      const tagChips = (s.tags || []).length ? (s.tags || []).map(t => {
+        const cls = t.indexOf('近视') !== -1 ? 'bg-red-50 text-red-500' : t.indexOf('过敏') !== -1 ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600';
+        return `<span class="text-xs px-2 py-1 rounded-lg ${cls}">${t}</span>`;
+      }).join('') : '<span class="text-xs text-gray-400">暂无标签</span>';
+      const recs = (sum.recs || []).map(r => ({ e: r.e, v: r.v, pct: r.v / r.e.fullScore * 100 }));
+      const chart = recs.length >= 1
+        ? trendChartSvg(recs)
+        : '<p class="text-xs text-gray-400 text-center py-6">还没有成绩记录，录一场考试就有走势了</p>';
+      const latest = recs.length ? recs[recs.length - 1] : null;
+      const latestDelta = sum.delta === null ? '' :
+        sum.delta > 0 ? `<span class="text-green-600">↑ ${sum.delta}分</span>` :
+        sum.delta < 0 ? `<span class="text-red-500">↓ ${Math.abs(sum.delta)}分</span>` : '<span class="text-gray-400">→ 持平</span>';
+      document.getElementById('student-detail-content').innerHTML = `
+        <div class="px-4 pt-1">
+          <div class="flex items-center mb-4">
+            <div class="w-14 h-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-md">${s.avatar}</div>
+            <div class="ml-3 flex-1 min-w-0">
+              <p class="text-xl font-bold text-gray-900">${s.name}</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">${escAttr(currentClassName())} ｜ 学号 ${String(s.id).padStart(2, '0')} ｜ ${seatIdx >= 0 ? '座位号 ' + (seatIdx + 1) : '未排座'}</p>
+            </div>
+            <button class="text-gray-400 p-1 shrink-0" onclick="hideStudentDetail()">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+            </button>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm p-4 mb-3">
+            <div class="flex justify-between items-center mb-1">
+              <p class="font-bold text-gray-800 text-sm">历次成绩走势</p>
+              <p class="text-[10px] text-gray-400">${recs.length} 场考试 · 按得分率折算</p>
+            </div>
+            ${chart}
+            ${latest ? `<p class="text-[11px] text-gray-500 mt-1">最近一场《${escAttr(latest.e.name)}》 <b class="text-gray-800">${latest.v}</b> 分 ${latestDelta}</p>` : ''}
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm p-4 mb-3">
+            <p class="font-bold text-gray-800 text-sm mb-2">标签 · 健康信息</p>
+            <div class="flex flex-wrap gap-1.5">${tagChips}</div>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm divide-y divide-gray-50">
+            <button class="w-full flex items-center p-3.5 text-left" onclick="hideStudentDetail();switchPage('homework')">
+              <div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+              </div>
+              <span class="text-sm text-gray-800 ml-3 flex-1">作业情况</span>
+              <span class="text-xs text-gray-400">${unsubCnt} 次待交 · ${needCnt} 次待订正</span>
+              <svg class="w-4 h-4 text-gray-300 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+            <button class="w-full flex items-center p-3.5 text-left" onclick="hideStudentDetail();switchPage('student');showStudentNotes(${s.id})">
+              <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              </div>
+              <span class="text-sm text-gray-800 ml-3 flex-1">随记</span>
+              <span class="text-xs text-gray-400">${notes.length} 条随手记</span>
+              <svg class="w-4 h-4 text-gray-300 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+            <button class="w-full flex items-center p-3.5 text-left" onclick="hideStudentDetail();goStudentSub('seat')">
+              <div class="w-8 h-8 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              </div>
+              <span class="text-sm text-gray-800 ml-3 flex-1">座位</span>
+              <span class="text-xs text-gray-400">${seatText}</span>
+              <svg class="w-4 h-4 text-gray-300 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+            <div class="w-full flex items-center p-3.5">
+              <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+              </div>
+              <span class="text-sm text-gray-800 ml-3 flex-1">标记为重点关注</span>
+              <button class="w-11 h-6 rounded-full transition-colors relative ${isFocus ? 'bg-brand-600' : 'bg-gray-200'}" onclick="toggleFocusTag()">
+                <span class="absolute top-0.5 ${isFocus ? 'right-0.5' : 'left-0.5'} w-5 h-5 bg-white rounded-full shadow transition-all"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('student-detail').classList.remove('hidden');
+    };
+
+    window.hideStudentDetail = function() {
+      document.getElementById('student-detail').classList.add('hidden');
+    };
+
+    window.toggleFocusTag = function() {
+      const s = students.find(x => x.id === currentDetailStudentId);
+      if (!s) return;
+      if (!Array.isArray(s.tags)) s.tags = [];
+      const i = s.tags.indexOf('重点关注');
+      if (i === -1) s.tags.push('重点关注'); else s.tags.splice(i, 1);
+      persist();
+      showStudentDetail(s.id);
+      renderStudentFilters();
+      renderStudentList();
+    };
+
+    // ===== 学生子页面 =====
+    function openSubpagePanel() {
+      const sp = document.getElementById('student-subpage');
+      sp.classList.remove('hidden');
+      requestAnimationFrame(() => requestAnimationFrame(() => sp.classList.add('open')));
+    }
+    const subpageData = {
+      grade: {
+        title: '成绩管理',
+        content: `
+          <div class="bg-gray-100 p-1 rounded-xl flex mb-4">
+            <button class="flex-1 py-2 text-sm font-medium rounded-lg bg-white text-brand-600 shadow-sm" id="gv-btn-entry" onclick="switchGradeView('entry')">成绩录入</button>
+            <button class="flex-1 py-2 text-sm font-medium rounded-lg text-gray-600" id="gv-btn-trend" onclick="switchGradeView('trend')">成绩趋势</button>
+          </div>
+          <div id="grade-entry-view">
+            <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
+              <div class="flex space-x-2 overflow-x-auto no-scrollbar mb-3" id="grade-exam-tabs"></div>
+              <p class="text-xs text-gray-500 mb-3 leading-relaxed" id="grade-stats"></p>
+              <div class="space-y-2" id="grade-list"></div>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 bg-brand-600 text-white py-3 rounded-xl font-medium" onclick="exportGrades()">导出成绩单</button>
+              <button class="px-4 py-3 rounded-xl text-sm text-red-600 bg-red-50" onclick="deleteExam()">删除考试</button>
+            </div>
+          </div>
+          <div id="grade-trend-view" class="hidden">
+            <div class="bg-white rounded-2xl shadow-sm p-4" id="grade-trend-content"></div>
+          </div>
+        `
+      },
+      seat: {
+        title: '座位安排',
+        content: `
+          <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-bold text-gray-800">教室座位</h3>
+              <button class="text-xs text-white bg-brand-600 px-3 py-1.5 rounded-lg font-medium" onclick="autoGenerateSeats()">一键生成</button>
+            </div>
+            <div class="flex flex-col items-center mb-3">
+              <div class="w-4/5 h-10 rounded-md flex items-center justify-center text-[11px] tracking-[0.3em] text-green-50" style="background:#3b5e4b; box-shadow: inset 0 0 0 3px #d8c39a, 0 1px 3px rgba(0,0,0,.15)">黑板</div>
+              <div class="mt-1.5 w-24 h-7 rounded flex items-center justify-center text-[11px] font-medium text-amber-900" style="background:#ecd9ac; border-bottom:3px solid #d5ba7d">讲台</div>
+            </div>
+            <div class="flex justify-between items-center mb-3">
+              <div class="flex items-center space-x-2">
+                <button class="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm" onclick="changeSeatRows(-1)">−</button>
+                <span class="text-sm text-gray-700"><span id="seat-rows">4</span> 排</span>
+                <button class="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm" onclick="changeSeatRows(1)">+</button>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button class="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm" onclick="changeSeatCols(-1)">−</button>
+                <span class="text-sm text-gray-700"><span id="seat-cols">4</span> 列</span>
+                <button class="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm" onclick="changeSeatCols(1)">+</button>
+              </div>
+            </div>
+            <div id="seat-grid"></div>
+            <p class="text-[10px] text-gray-400 text-center mt-2">课桌两两一组 · 中间为过道 · 前排靠近黑板</p>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-bold text-gray-800">约束条件</h3>
+              <button class="text-xs text-brand-600 bg-brand-50 px-2 py-1 rounded-lg" onclick="addConstraint()">+ 添加</button>
+            </div>
+            <div class="space-y-2" id="seat-constraints"></div>
+          </div>
+          <button class="w-full bg-brand-600 text-white py-3 rounded-xl font-medium" onclick="exportSeats()">导出座位表</button>
+        `
+      },
+      duty: {
+        title: '值日生表',
+        content: `
+          <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-bold text-gray-800">本周值日安排</h3>
+              <div class="flex gap-2">
+                <button class="text-xs text-brand-600 bg-brand-50 px-2 py-1 rounded-lg" onclick="autoAssignDuty()">自动排班</button>
+                <button class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg" onclick="addDutyChore()">+ 任务</button>
+              </div>
+            </div>
+            <div class="space-y-3" id="duty-roster"></div>
+          </div>
+          <button class="w-full bg-brand-600 text-white py-3 rounded-xl font-medium" onclick="exportDuty()">导出值日表</button>
+        `
+      },
+      committee: {
+        title: '班委名单',
+        content: `
+          <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-bold text-gray-800">本届班委</h3>
+              <button class="text-xs text-brand-600 bg-brand-50 px-2 py-1 rounded-lg" onclick="addCommittee()">+ 添加</button>
+            </div>
+            <div class="space-y-3" id="committee-list"></div>
+          </div>
+          <button class="w-full bg-brand-600 text-white py-3 rounded-xl font-medium" onclick="exportCommittee()">导出班委通讯录</button>
+        `
+      }
+    };
+
+    // ===== 座位约束条件（可编辑） =====
+    let studentNames = students.map(s => s.name);
+    let seatConstraints = [
+      { id: 1, type: 'notTogether', a: '张梓涵', b: '杨浩宇' },
+      { id: 2, type: 'together', a: '李子轩', b: '周诗涵' },
+      { id: 3, type: 'frontRow', name: '王一诺' },
+    ];
+    let constraintIdSeq = 3;
+
+    function studentOptions(selected) {
+      return studentNames.map(n => `<option value="${n}" ${n === selected ? 'selected' : ''}>${n}</option>`).join('');
+    }
+
+    function renderSeatConstraints() {
+      persist();
+      const container = document.getElementById('seat-constraints');
+      if (!container) return;
+      if (seatConstraints.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-400">暂无约束，点击右上角「+ 添加」</p>';
+        return;
+      }
+      container.innerHTML = seatConstraints.map(c => {
+        let fields = '';
+        if (c.type === 'notTogether' || c.type === 'together') {
+          fields = `
+            <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" onchange="updateConstraint(${c.id}, 'a', this.value)">${studentOptions(c.a)}</select>
+            <span class="text-xs text-gray-400">和</span>
+            <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" onchange="updateConstraint(${c.id}, 'b', this.value)">${studentOptions(c.b)}</select>
+            <span class="text-xs text-gray-500">${c.type === 'notTogether' ? '不能同桌' : '必须同桌'}</span>`;
+        } else {
+          const label = c.type === 'frontRow' ? '必须前排' : '必须后排';
+          fields = `
+            <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" onchange="updateConstraint(${c.id}, 'name', this.value)">${studentOptions(c.name)}</select>
+            <span class="text-xs text-gray-500">${label}</span>`;
+        }
+        return `
+          <div class="flex flex-wrap items-center gap-1.5 p-2 bg-gray-50 rounded-xl">
+            <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" onchange="updateConstraintType(${c.id}, this.value)">
+              <option value="notTogether" ${c.type === 'notTogether' ? 'selected' : ''}>不能同桌</option>
+              <option value="together" ${c.type === 'together' ? 'selected' : ''}>必须同桌</option>
+              <option value="frontRow" ${c.type === 'frontRow' ? 'selected' : ''}>必须前排</option>
+              <option value="backRow" ${c.type === 'backRow' ? 'selected' : ''}>必须后排</option>
+            </select>
+            ${fields}
+            <button class="ml-auto text-gray-400 p-1" onclick="removeConstraint(${c.id})" aria-label="删除">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>`;
+      }).join('');
+    }
+
+    window.updateConstraintType = function(id, type) {
+      const c = seatConstraints.find(x => x.id === id);
+      if (!c) return;
+      c.type = type;
+      if (type === 'notTogether' || type === 'together') {
+        c.a = studentNames[0];
+        c.b = studentNames[1] || studentNames[0];
+        delete c.name;
+      } else {
+        c.name = studentNames[0];
+        delete c.a;
+        delete c.b;
+      }
+      renderSeatConstraints();
+    };
+
+    window.updateConstraint = function(id, field, value) {
+      const c = seatConstraints.find(x => x.id === id);
+      if (!c) return;
+      c[field] = value;
+    };
+
+    window.removeConstraint = function(id) {
+      seatConstraints = seatConstraints.filter(x => x.id !== id);
+      renderSeatConstraints();
+    };
+
+    window.addConstraint = function() {
+      constraintIdSeq += 1;
+      seatConstraints.push({
+        id: constraintIdSeq,
+        type: 'notTogether',
+        a: studentNames[0],
+        b: studentNames[1] || studentNames[0],
+      });
+      renderSeatConstraints();
+    };
+
+    // ===== 座位表行列控制 =====
+    let seatRows = 4;
+    let seatCols = 4;
+
+    function defaultSeatOrder() {
+      const arr = students.map(s => s.id);
+      const total = seatRows * seatCols;
+      while (arr.length < total) arr.push(null);
+      return arr.slice(0, total);
+    }
+
+    function renderSeatGrid() {
+      persist();
+      const gridContainer = document.getElementById('seat-grid');
+      const rowsEl = document.getElementById('seat-rows');
+      const colsEl = document.getElementById('seat-cols');
+      if (!gridContainer) return;
+
+      if (rowsEl) rowsEl.textContent = seatRows;
+      if (colsEl) colsEl.textContent = seatCols;
+
+      const totalSeats = seatRows * seatCols;
+      // 座位顺序失效（行列变化/新增学生）时按名单顺序重排
+      if (!Array.isArray(seatOrder) || seatOrder.length !== totalSeats || !students.every(s => seatOrder.indexOf(s.id) !== -1)) {
+        seatOrder = defaultSeatOrder();
+      }
+
+      // 列模板：两两一组，组间插入窄列当过道（0.32fr），最左一窄列为排号
+      const parts = ['16px'];
+      for (let c = 0; c < seatCols; c++) {
+        if (c > 0 && c % 2 === 0) parts.push('0.32fr');
+        parts.push('1fr');
+      }
+      const deskTextCls = seatCols >= 6 ? 'text-[10px]' : 'text-[11px]';
+
+      let cells = '';
+      for (let r = 0; r < seatRows; r++) {
+        cells += `<div class="flex items-center justify-center text-[10px] text-gray-400">${r + 1}</div>`;
+        for (let c = 0; c < seatCols; c++) {
+          if (c > 0 && c % 2 === 0) cells += '<div></div>';
+          const idx = r * seatCols + c;
+          const id = seatOrder[idx];
+          const seat = id ? students.find(s => s.id === id) : null;
+          const delay = Math.min(idx * 12, 420);
+          cells += seat
+            ? `<div class="aspect-[5/4] rounded-lg bg-[#fdf3d7] border border-[#e8d3a3] border-b-[3px] flex items-center justify-center px-0.5" style="animation: fadeIn .3s ${delay}ms both"><span class="${deskTextCls} leading-tight font-medium text-gray-800 text-center">${seat.name}</span></div>`
+            : `<div class="aspect-[5/4] rounded-lg border border-dashed border-gray-300 bg-white/50 flex items-center justify-center" style="animation: fadeIn .3s ${delay}ms both"><span class="text-[10px] text-gray-300">空</span></div>`;
+        }
+      }
+
+      gridContainer.innerHTML = `
+        <div class="rounded-xl p-3" style="background:#f7f3ea">
+          <div class="grid" style="grid-template-columns: ${parts.join(' ')}; gap: 7px 6px;">${cells}</div>
+        </div>
+      `;
+    }
+
+    window.changeSeatRows = function(delta) {
+      const newRows = seatRows + delta;
+      if (newRows >= 2 && newRows <= 10) {
+        seatRows = newRows;
+        renderSeatGrid();
+      }
+    };
+
+    window.changeSeatCols = function(delta) {
+      const newCols = seatCols + delta;
+      if (newCols >= 2 && newCols <= 8) {
+        seatCols = newCols;
+        renderSeatGrid();
+      }
+    };
+
+    // ===== 一键排座位（按约束条件随机重排） =====
+    // “同桌”= 同一排、两两一组内相邻的两张课桌（列 0-1 / 2-3 / 4-5…，组间为过道）；
+    // “前排”= 第1排；“后排”= 最后一排
+    function seatConstraintOk(c, arr) {
+      if (c.type === 'notTogether' || c.type === 'together') {
+        const a = students.find(s => s.name === c.a);
+        const b = students.find(s => s.name === c.b);
+        if (!a || !b || a.id === b.id) return true;
+        const ia = arr.indexOf(a.id), ib = arr.indexOf(b.id);
+        if (ia === -1 || ib === -1) return true;
+        const ra = Math.floor(ia / seatCols), ca = ia % seatCols;
+        const rb = Math.floor(ib / seatCols), cb = ib % seatCols;
+        const adjacent = (ra === rb && ca !== cb && Math.floor(ca / 2) === Math.floor(cb / 2));
+        return c.type === 'together' ? adjacent : !adjacent;
+      }
+      const s = students.find(x => x.name === c.name);
+      if (!s) return true;
+      const i = arr.indexOf(s.id);
+      if (i === -1) return true;
+      const r = Math.floor(i / seatCols);
+      if (c.type === 'frontRow') return r === 0;
+      if (c.type === 'backRow') return r === seatRows - 1;
+      return true;
+    }
+
+    window.autoGenerateSeats = function() {
+      const total = seatRows * seatCols;
+      if (students.length > total) {
+        alert('座位数不够（' + students.length + ' 名学生 / ' + total + ' 个座位），请先增加行或列。');
+        return;
+      }
+      const ids = students.map(s => s.id);
+      const pad = () => Array(total - ids.length).fill(null);
+      for (let t = 0; t < 300; t++) {
+        const arr = ids.slice().sort(() => Math.random() - 0.5).concat(pad());
+        if (seatConstraints.every(c => seatConstraintOk(c, arr))) {
+          seatOrder = arr;
+          renderSeatGrid();
+          return;
+        }
+      }
+      // 约束冲突无法满足时，保留最后一版并提示
+      seatOrder = ids.slice().sort(() => Math.random() - 0.5).concat(pad());
+      renderSeatGrid();
+      alert('约束条件有冲突，试了很多次无法全部满足。已生成一版随机座位，可删除部分约束后重试。');
+    };
+
+    window.exportSeats = function() {
+      let text = '【' + currentClassName() + '】座位表（' + seatRows + ' 排 × ' + seatCols + ' 列）\n讲台\n\n';
+      for (let r = 0; r < seatRows; r++) {
+        const row = [];
+        for (let c = 0; c < seatCols; c++) {
+          const id = seatOrder[r * seatCols + c];
+          const s = id ? students.find(x => x.id === id) : null;
+          row.push(s ? s.name : '——');
+        }
+        text += '第' + (r + 1) + '排：' + row.join('　') + '\n';
+      }
+      exportFile(currentClassName() + '_座位表.txt', text);
+    };
+
+    // ===== 值日生表（详细分工，可编辑） =====
+    let dutyDays = ['周一', '周二', '周三', '周四', '周五'];
+    const dutyChoresInit = ['主负责人', '扫地', '拖地', '擦黑板', '倒垃圾', '摆桌椅'];
+    let dutyChores = [...dutyChoresInit];
+    let dutyRoster = {};
+    dutyDays.forEach((day, di) => {
+      dutyRoster[day] = {};
+      dutyChoresInit.forEach((chore, ci) => {
+        dutyRoster[day][chore] = students[(di + ci) % students.length].name;
+      });
+    });
+
+    function renderDutyRoster() {
+      persist();
+      const container = document.getElementById('duty-roster');
+      if (!container) return;
+      container.innerHTML = dutyDays.map(day => {
+        const rows = dutyChores.map(chore => {
+          const name = dutyRoster[day][chore] || '';
+          return `
+            <div class="flex items-center gap-2 py-1.5">
+              <span class="text-xs text-gray-500 w-14 flex-shrink-0">${chore}</span>
+              <select class="flex-1 text-xs bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700" onchange="updateDuty('${day}', '${chore}', this.value)">
+                <option value="">未安排</option>
+                ${studentOptions(name)}
+              </select>
+              <button class="text-gray-300 hover:text-red-400 p-1 flex-shrink-0" onclick="removeDutyChore('${chore}')" aria-label="删除任务">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>`;
+        }).join('');
+        return `
+          <div class="bg-gray-50 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm font-bold text-gray-800">${day}</span>
+              <span class="text-xs text-gray-400">${dutyChores.length} 项</span>
+            </div>
+            <div class="divide-y divide-gray-100">${rows}</div>
+          </div>`;
+      }).join('');
+    }
+
+    window.updateDuty = function(day, chore, name) {
+      dutyRoster[day][chore] = name;
+    };
+
+    window.removeDutyChore = function(chore) {
+      dutyChores = dutyChores.filter(c => c !== chore);
+      dutyDays.forEach(day => { delete dutyRoster[day][chore]; });
+      renderDutyRoster();
+    };
+
+    window.addDutyChore = async function() {
+      const vals = await sheetInput({ title: '添加值日任务', fields: [{ key: 'chore', label: '任务名称', placeholder: '如 浇花、关门窗' }], okText: '添加' });
+      if (!vals) return;
+      const chore = vals.chore.trim();
+      if (!chore || dutyChores.includes(chore)) return;
+      dutyChores.push(chore);
+      dutyDays.forEach(day => { dutyRoster[day][chore] = ''; });
+      renderDutyRoster();
+    };
+
+    window.autoAssignDuty = function() {
+      dutyDays.forEach((day, di) => {
+        dutyChores.forEach((chore, ci) => {
+          dutyRoster[day][chore] = students[(di + ci) % students.length].name;
+        });
+      });
+      renderDutyRoster();
+    };
+
+    window.exportDuty = function() {
+      let text = '【' + currentClassName() + '】本周值日生表\n';
+      dutyDays.forEach(day => {
+        text += '\n' + day + '\n';
+        dutyChores.forEach(chore => {
+          text += '  ' + chore + '：' + (dutyRoster[day][chore] || '未安排') + '\n';
+        });
+      });
+      exportFile(currentClassName() + '_值日生表.txt', text);
+    };
+
+    // ===== 班委名单（职务/学生/职责均可编辑） =====
+    let committeeList = [
+      { id: 1, role: '班长', name: '张三', desc: '负责班级日常管理' },
+      { id: 2, role: '副班长', name: '李四', desc: '协助班长工作' },
+      { id: 3, role: '学习委员', name: '王五', desc: '负责学习事务' },
+      { id: 4, role: '纪律委员', name: '赵六', desc: '维持课堂纪律' },
+      { id: 5, role: '卫生委员', name: '陈七', desc: '管理班级卫生' },
+    ];
+    let committeeIdSeq = 5;
+
+    // ===== 多班级支持（数据按班级隔离；待办 todos / 课表 全班级共用）=====
+    const LS_KEY = 'teacher_workbench_v1';
+
+    function buildSeed() {
+      return {
+        students, groups,
+        homeworks, currentHomeworkId, exams,
+        dutyDays, dutyChores, dutyRoster,
+        committeeList, seatConstraints, seatRows, seatCols, seatOrder
+      };
+    }
+    function buildClassesData() {
+      const seed = buildSeed();
+      const names = ['三(2)班', '三(1)班', '三(3)班'];
+      const obj = {};
+      names.forEach((name, i) => {
+        obj['c' + (i + 1)] = Object.assign({ name: name }, JSON.parse(JSON.stringify(seed)));
+      });
+      return obj;
+    }
+    let classesData = buildClassesData();
+    let activeClassId = 'c1';
+
+    function currentClassName() {
+      return classesData[activeClassId] ? classesData[activeClassId].name : '';
+    }
+    function loadActiveClass() {
+      if (!classesData[activeClassId]) activeClassId = Object.keys(classesData)[0];
+      const c = classesData[activeClassId];
+      ensureClassStudents(c);
+      ensureHomeworkDates(c);
+      ensureHomeworkRecords(c);
+      ensureClassExtras(c);
+      students = c.students;
+      groups = c.groups;
+      homeworks = c.homeworks || [];
+      currentHomeworkId = c.currentHomeworkId || (homeworks[0] && homeworks[0].id);
+      exams = c.exams;
+      if (!exams.find(e => e.id === currentExamId)) currentExamId = exams[0] ? exams[0].id : null;
+      dutyDays = c.dutyDays;
+      dutyChores = c.dutyChores;
+      dutyRoster = c.dutyRoster;
+      committeeList = c.committeeList;
+      seatConstraints = c.seatConstraints;
+      seatRows = c.seatRows;
+      seatCols = c.seatCols;
+      seatOrder = c.seatOrder;
+      studentNames = students.map(s => s.name);
+    }
+    function saveActiveClass() {
+      const c = classesData[activeClassId];
+      if (!c) return;
+      c.students = students; c.groups = groups;
+      c.homeworks = homeworks; c.currentHomeworkId = currentHomeworkId; c.exams = exams;
+      c.dutyDays = dutyDays; c.dutyChores = dutyChores; c.dutyRoster = dutyRoster;
+      c.committeeList = committeeList; c.seatConstraints = seatConstraints;
+      c.seatRows = seatRows; c.seatCols = seatCols; c.seatOrder = seatOrder;
+    }
+    function persist() {
+      try {
+        saveActiveClass();
+        localStorage.setItem(LS_KEY, JSON.stringify({ classesData, activeClassId, todos, scheduleOriginal, scheduleCurrent, scheduleChanges, teacherName }));
+      } catch(e) {}
+    }
+    function loadAll() {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return false;
+        const p = JSON.parse(raw);
+        if (p.classesData) classesData = p.classesData;
+        if (p.activeClassId && classesData[p.activeClassId]) activeClassId = p.activeClassId;
+        if (p.todos) todos = p.todos;
+        if (p.teacherName) teacherName = p.teacherName;
+        // 智能课表为全局共享；兼容旧版（per-class）数据：若顶层无课表，则从当前班迁移上来
+        if (p.scheduleOriginal) scheduleOriginal = p.scheduleOriginal;
+        if (p.scheduleCurrent) scheduleCurrent = p.scheduleCurrent;
+        if (Array.isArray(p.scheduleChanges)) scheduleChanges = p.scheduleChanges;
+        else if (classesData[activeClassId] && classesData[activeClassId].scheduleCurrent) {
+          scheduleCurrent = classesData[activeClassId].scheduleCurrent;
+          if (classesData[activeClassId].scheduleOriginal) scheduleOriginal = classesData[activeClassId].scheduleOriginal;
+        }
+        // 旧数据兼容与默认值补齐
+        Object.values(classesData).forEach(c => {
+          if (!c.homeworks || c.homeworks.length === 0) migrateClassHomeworks(c);
+          ensureClassStudents(c);
+          ensureHomeworkDates(c);
+          ensureHomeworkRecords(c);
+          ensureClassExtras(c);
+        });
+        return true;
+      } catch(e) { return false; }
+    }
+
+    function ensureClassStudents(c) {
+      if (!Array.isArray(c.students)) c.students = [];
+      const defaultStudents = buildDefaultStudents();
+      const existingNames = new Set(c.students.map(s => s.name));
+      let need = 40 - c.students.length;
+      if (need <= 0) return;
+      let seq = c.students.reduce((m, s) => Math.max(m, s.id || 0), 0);
+      for (let i = 0; i < defaultStudents.length && need > 0; i++) {
+        const ds = defaultStudents[i];
+        if (existingNames.has(ds.name)) continue;
+        seq += 1;
+        const rec = {};
+        (c.homeworks || []).forEach(hw => { rec[hw.id] = { status: 'submitted', correct: 'none' }; });
+        c.students.push({
+          id: seq,
+          name: ds.name,
+          avatar: ds.avatar,
+          group: ds.group,
+          tags: ds.tags,
+          homeworkRecords: rec
+        });
+        need -= 1;
+      }
+    }
+
+    function ensureHomeworkDates(c) {
+      if (!Array.isArray(c.homeworks)) c.homeworks = [];
+      c.homeworks.forEach((hw, i) => {
+        if (!hw.date) {
+          if (i === 0) hw.date = getTodayStr();
+          else if (i === 1) hw.date = getDateOffsetStr(-1);
+          else hw.date = getTodayStr();
+        }
+      });
+    }
+
+    function ensureHomeworkRecords(c) {
+      if (!Array.isArray(c.homeworks) || !Array.isArray(c.students)) return;
+      c.homeworks.forEach(hw => {
+        c.students.forEach(s => {
+          if (!s.homeworkRecords) s.homeworkRecords = {};
+          if (!s.homeworkRecords[hw.id]) {
+            s.homeworkRecords[hw.id] = { status: 'submitted', correct: 'none' };
+          }
+        });
+      });
+    }
+
+    // 成绩/座位等 v2 新增数据的兜底
+    function ensureClassExtras(c) {
+      if (!Array.isArray(c.exams)) c.exams = [{ id: 'ex_1', name: '数学单元测', date: getTodayStr(), fullScore: 100 }];
+      if (!Array.isArray(c.seatOrder)) c.seatOrder = [];
+      (c.students || []).forEach(s => { if (!s.scores) s.scores = {}; if (!Array.isArray(s.notes)) s.notes = []; });
+    }
+    function migrateClassHomeworks(c) {
+      const defaultHwId = 'hw_1';
+      c.homeworks = [{ id: defaultHwId, subject: '语文', title: '课文背诵', deadline: '今天 08:00' }];
+      c.currentHomeworkId = defaultHwId;
+      c.students.forEach(s => {
+        s.homeworkRecords = {
+          [defaultHwId]: { status: s.status || 'unsubmitted', correct: s.correct || 'none' }
+        };
+        delete s.status;
+        delete s.correct;
+      });
+    }
+    function renderAllPages() {
+      renderClassBar();
+      renderWeekdays();
+      renderSchedule();
+      renderScheduleChanges();
+      renderHomeworkDetail();
+      renderStudentFilters();
+      renderStudentList();
+      renderTodos();
+      renderDutyRoster();
+      renderCommittee();
+      renderSeatGrid();
+      renderSeatConstraints();
+      renderHome();
+    }
+    function renderClassBar() {
+      const name = currentClassName();
+      const chip = `<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-medium bg-brand-50 text-brand-600" onclick="openClassWindow()">${escAttr(name)} <span class="text-[10px]">▼</span></button>`;
+      document.querySelectorAll('.class-bar').forEach(el => el.innerHTML = chip);
+    }
+    window.openClassWindow = function() {
+      renderClassList();
+      document.getElementById('class-window').classList.remove('hidden');
+    };
+    window.closeClassWindow = function() {
+      document.getElementById('class-window').classList.add('hidden');
+    };
+    function renderClassList() {
+      const container = document.getElementById('class-list');
+      container.innerHTML = Object.keys(classesData).map(id => {
+        const c = classesData[id];
+        const active = id === activeClassId;
+        return `
+        <div class="flex items-center justify-between p-3 rounded-xl ${active ? 'bg-brand-50 border border-brand-200' : 'bg-gray-50'}">
+          <button class="flex-1 text-left" onclick="switchClass('${id}')">
+            <p class="text-sm font-medium text-gray-800">${escAttr(c.name)} ${active ? '<span class="text-xs text-brand-600 ml-1">● 当前</span>' : ''}</p>
+            <p class="text-xs text-gray-500 mt-0.5">${c.students.length} 名学生</p>
+          </button>
+          <div class="flex items-center gap-1 ml-2 shrink-0">
+            <button class="text-xs text-gray-500 hover:text-brand-600 px-2 py-1" onclick="renameClass('${id}')">重命名</button>
+            <button class="text-xs text-gray-400 hover:text-red-500 px-2 py-1" onclick="deleteClass('${id}')">删除</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    window.switchClass = function(id) {
+      if (id !== activeClassId) {
+        saveActiveClass();
+        activeClassId = id;
+        loadActiveClass();
+      }
+      closeClassWindow();
+      renderClassBar();
+      renderAllPages();
+      persist();
+    };
+    window.addClass = async function() {
+      const vals = await sheetInput({ title: '新建班级', fields: [{ key: 'name', label: '班级名称', value: '新班级' }], okText: '创建' });
+      if (!vals) return;
+      const name = vals.name.trim();
+      if (!name) return;
+      const id = 'c_' + Date.now();
+      const tpl = classesData[activeClassId];
+      classesData[id] = {
+        name: name,
+        students: JSON.parse(JSON.stringify(tpl.students)),
+        groups: JSON.parse(JSON.stringify(tpl.groups)),
+        homeworks: JSON.parse(JSON.stringify(tpl.homeworks)),
+        currentHomeworkId: tpl.currentHomeworkId,
+        exams: JSON.parse(JSON.stringify(tpl.exams || [])),
+        dutyDays: JSON.parse(JSON.stringify(tpl.dutyDays)),
+        dutyChores: JSON.parse(JSON.stringify(tpl.dutyChores)),
+        dutyRoster: JSON.parse(JSON.stringify(tpl.dutyRoster)),
+        committeeList: JSON.parse(JSON.stringify(tpl.committeeList)),
+        seatConstraints: [],
+        seatRows: tpl.seatRows,
+        seatCols: tpl.seatCols,
+        seatOrder: tpl.seatOrder ? tpl.seatOrder.slice() : []
+      };
+      activeClassId = id;
+      loadActiveClass();
+      renderClassList();
+      renderClassBar();
+      renderAllPages();
+      persist();
+    };
+    window.renameClass = async function(id) {
+      const c = classesData[id];
+      const vals = await sheetInput({ title: '重命名班级', fields: [{ key: 'name', label: '班级名称', value: c.name }], okText: '保存' });
+      if (!vals) return;
+      const name = vals.name.trim();
+      if (!name) return;
+      c.name = name;
+      renderClassList();
+      renderClassBar();
+      persist();
+    };
+    window.deleteClass = async function(id) {
+      const keys = Object.keys(classesData);
+      if (keys.length <= 1) { alert('至少保留一个班级'); return; }
+      const c = classesData[id];
+      if (!(await sheetConfirm({ title: '删除班级', message: '确定删除「' + c.name + '」？该班级所有数据将丢失，且不可恢复。', okText: '删除', danger: true }))) return;
+      delete classesData[id];
+      if (activeClassId === id) {
+        activeClassId = Object.keys(classesData)[0];
+        loadActiveClass();
+      }
+      renderClassList();
+      renderClassBar();
+      renderAllPages();
+      persist();
+    };
+
+    function escAttr(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function renderCommittee() {
+      persist();
+      const container = document.getElementById('committee-list');
+      if (!container) return;
+      if (committeeList.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-400">暂无班委，点击右上角「+ 添加」</p>';
+        return;
+      }
+      container.innerHTML = committeeList.map(item => `
+        <div class="bg-gray-50 rounded-xl p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <div id="cm-avatar-${item.id}" class="w-9 h-9 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-sm font-bold flex-shrink-0">${escAttr(item.role.charAt(0))}</div>
+            <input class="flex-1 min-w-0 text-sm font-medium text-gray-800 bg-transparent border-b border-transparent focus:border-purple-300 outline-none" value="${escAttr(item.role)}" onchange="updateCommittee(${item.id}, 'role', this.value)" placeholder="职务">
+            <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700 flex-shrink-0" onchange="updateCommittee(${item.id}, 'name', this.value)">
+              ${studentOptions(item.name)}
+            </select>
+            <button class="text-gray-300 hover:text-red-400 p-1 flex-shrink-0" onclick="removeCommittee(${item.id})" aria-label="删除">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+          <input class="w-full text-xs text-gray-500 bg-transparent border-b border-transparent focus:border-purple-300 outline-none" value="${escAttr(item.desc)}" onchange="updateCommittee(${item.id}, 'desc', this.value)" placeholder="职责说明">
+        </div>
+      `).join('');
+    }
+
+    window.updateCommittee = function(id, field, value) {
+      const c = committeeList.find(x => x.id === id);
+      if (!c) return;
+      c[field] = value;
+      if (field === 'role') {
+        const av = document.getElementById('cm-avatar-' + id);
+        if (av) av.textContent = value ? value.charAt(0) : '';
+      }
+    };
+
+    window.removeCommittee = function(id) {
+      committeeList = committeeList.filter(x => x.id !== id);
+      renderCommittee();
+    };
+
+    window.addCommittee = function() {
+      committeeIdSeq += 1;
+      committeeList.push({ id: committeeIdSeq, role: '新职务', name: studentNames[0], desc: '' });
+      renderCommittee();
+    };
+
+    window.exportCommittee = function() {
+      let text = '【' + currentClassName() + '】班委通讯录\n';
+      committeeList.forEach(c => {
+        text += '\n' + c.role + '：' + c.name + '\n  职责：' + (c.desc || '无') + '\n';
+      });
+      exportFile(currentClassName() + '_班委通讯录.txt', text);
+    };
+
+    // ===== 批量导入学生 =====
+    window.openImport = function() {
+      document.getElementById('import-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    };
+
+    window.closeImport = function() {
+      document.getElementById('import-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    };
+
+    function parseStudents(raw) {
+      const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+      const result = [];
+      lines.forEach(line => {
+        const parts = line.split(/[,，\t]+/).map(p => p.trim()).filter(p => p);
+        if (!parts[0]) return;
+        const name = parts[0];
+        let group = 1;
+        const tags = [];
+        if (parts[1] && /^\d+$/.test(parts[1])) {
+          group = parseInt(parts[1], 10);
+          for (let i = 2; i < parts.length; i++) tags.push(parts[i]);
+        } else {
+          for (let i = 1; i < parts.length; i++) tags.push(parts[i]);
+        }
+        result.push({ name, group, tags });
+      });
+      return result;
+    }
+
+    window.doImport = function() {
+      const fileInput = document.getElementById('import-file');
+      const text = document.getElementById('import-text').value.trim();
+      const run = (raw) => {
+        const added = parseStudents(raw);
+        if (added.length === 0) {
+          alert('未识别到学生，请检查格式（每行一个姓名，可用逗号分隔组和标签）');
+          return;
+        }
+        let seq = students.reduce((m, s) => Math.max(m, s.id), 0);
+        added.forEach(a => {
+          seq += 1;
+          const rec = {};
+          homeworks.forEach(hw => { rec[hw.id] = { status: 'submitted', correct: 'none' }; });
+          students.push({
+            id: seq,
+            name: a.name,
+            avatar: a.name.charAt(0),
+            group: a.group,
+            tags: a.tags,
+            homeworkRecords: rec
+          });
+        });
+        studentNames = students.map(s => s.name);
+        renderStudentList();
+        closeImport();
+        document.getElementById('import-text').value = '';
+        fileInput.value = '';
+      };
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => run(String(e.target.result));
+        reader.readAsText(fileInput.files[0], 'utf-8');
+      } else if (text) {
+        run(text);
+      } else {
+        alert('请先粘贴学生名单，或选择 .csv/.txt 文件');
+      }
+    };
+
+    window.showStudentSubpage = function(type) {
+      const data = subpageData[type];
+      document.getElementById('subpage-title').textContent = data.title;
+      document.getElementById('subpage-content').innerHTML = data.content;
+      openSubpagePanel();
+      document.body.style.overflow = 'hidden';
+      if (type === 'seat') {
+        renderSeatGrid();
+        renderSeatConstraints();
+      } else if (type === 'grade') {
+        switchGradeView('entry');
+      } else if (type === 'duty') {
+        renderDutyRoster();
+      } else if (type === 'committee') {
+        renderCommittee();
+      }
+    };
+
+    window.hideStudentSubpage = function() {
+      const sp = document.getElementById('student-subpage');
+      sp.classList.remove('open');
+      document.body.style.overflow = '';
+      setTimeout(() => { if (!sp.classList.contains('open')) sp.classList.add('hidden'); }, 280);
+    };
+
+    // ===== 渲染星期标签 =====
+    function renderWeekdays() {
+      const container = document.getElementById('weekdays');
+      container.innerHTML = weekdays.map(d => `
+        <div class="flex-1 py-2 rounded-lg cursor-pointer ${d === activeWeekday ? 'bg-brand-50 text-brand-600' : 'text-gray-500'}" onclick="switchWeekday('${d}')">
+          <p class="text-xs">${d}</p>
+          <p class="text-sm font-bold">${weekdayDates[d]}</p>
+        </div>
+      `).join('');
+    }
+
+    // ===== 渲染课表 =====
+    function renderSchedule() {
+      persist();
+      const container = document.getElementById('schedule-list');
+      const data = scheduleMode === 'original' ? scheduleOriginal[activeWeekday] : scheduleCurrent[activeWeekday];
+      const editable = scheduleMode === 'current';
+      container.innerHTML = data.map((item, idx) => {
+        const isChanged = !!item.note;
+        if (!editable) {
+          return `
+          <div class="flex items-center p-3 rounded-xl cursor-pointer hover:bg-gray-100 ${isChanged ? 'bg-red-50 border border-red-100' : 'bg-gray-50'}" onclick="openScheduleEdit(${idx})">
+            <div class="w-10 h-10 ${isChanged ? 'bg-red-500 text-white' : 'bg-white text-gray-500'} rounded-lg flex items-center justify-center text-sm font-bold mr-3">${item.period}</div>
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800 text-sm">${item.subject} ${isChanged ? '<span class="text-xs text-red-500 ml-1 font-normal">(调)</span>' : ''}</p>
+              <p class="text-xs text-gray-500">${item.time} · ${item.room}</p>
+              ${isChanged ? `<p class="text-xs text-red-500 mt-0.5">${item.note}</p>` : ''}
+            </div>
+            <span class="text-xs text-gray-300 ml-2 shrink-0">编辑</span>
+          </div>`;
+        }
+        return `
+        <div class="flex items-center p-3 rounded-xl ${isChanged ? 'bg-red-50 border border-red-100' : 'bg-gray-50'}">
+          <div class="w-10 h-10 ${isChanged ? 'bg-red-500 text-white' : 'bg-white text-gray-500'} rounded-lg flex items-center justify-center text-sm font-bold mr-3">${item.period}</div>
+          <div class="flex-1 space-y-1">
+            <div class="flex items-center gap-1">
+              <input class="flex-1 text-sm font-semibold text-gray-800 bg-transparent border-b border-transparent focus:border-brand-400 outline-none" value="${item.subject}" onchange="updateScheduleField('${activeWeekday}', ${idx}, 'subject', this.value)">
+              ${isChanged ? '<span class="text-xs text-red-500 font-normal shrink-0">(调)</span>' : ''}
+              <button class="ml-1 text-gray-400 hover:text-red-500 text-lg leading-none shrink-0" onclick="removePeriod('${activeWeekday}', ${idx})" title="删除该节次">×</button>
+            </div>
+            <div class="flex items-center gap-1">
+              <input class="w-32 text-xs text-gray-500 bg-transparent border-b border-transparent focus:border-brand-400 outline-none" value="${item.time}" onchange="updateScheduleField('${activeWeekday}', ${idx}, 'time', this.value)" placeholder="时间">
+              <span class="text-xs text-gray-400">·</span>
+              <input class="flex-1 text-xs text-gray-500 bg-transparent border-b border-transparent focus:border-brand-400 outline-none" value="${item.room}" onchange="updateScheduleField('${activeWeekday}', ${idx}, 'room', this.value)" placeholder="教室">
+            </div>
+            <input class="w-full text-xs text-red-500 bg-transparent border-b border-red-200 focus:border-red-400 outline-none" value="${item.note || ''}" onchange="updateScheduleField('${activeWeekday}', ${idx}, 'note', this.value)" placeholder="填写调课说明（留空=非调课）">
+          </div>
+        </div>`;
+      }).join('') + `
+        <button class="w-full mt-1 py-2 text-sm ${editable ? 'text-brand-600 bg-brand-50' : 'text-gray-500 bg-gray-100'} rounded-xl" onclick="${editable ? `addPeriod('${activeWeekday}')` : 'openScheduleAdd()'}">+ 添加节次</button>
+      `;
+    }
+
+    window.updateScheduleField = function(day, idx, field, value) {
+      const item = scheduleCurrent[day][idx];
+      const prevNote = item.note || '';
+      item[field] = value;
+      if (field === 'note') {
+        item.changed = !!value.trim();
+        if (value.trim() && value.trim() !== prevNote) logScheduleChange(day, idx, item);
+      }
+      renderSchedule();
+    };
+
+    // ===== 调课留痕：填写/修改调课说明时自动记录 =====
+    function logScheduleChange(day, idx, item) {
+      const base = scheduleOriginal[day] && scheduleOriginal[day][idx];
+      scheduleChanges.unshift({
+        date: formatDateShort(getTodayStr()),
+        weekday: day,
+        period: item.period,
+        from: base ? base.subject : item.subject,
+        to: item.subject,
+        reason: (item.note || '').trim()
+      });
+      renderScheduleChanges();
+    }
+
+    window.addPeriod = function(day) {
+      const list = scheduleCurrent[day];
+      const maxPeriod = list.reduce((m, p) => Math.max(m, p.period), 0);
+      list.push({ period: maxPeriod + 1, time: '00:00-00:00', subject: '新科目', room: '501' });
+      renderSchedule();
+    };
+
+    window.removePeriod = function(day, idx) {
+      scheduleCurrent[day].splice(idx, 1);
+      renderSchedule();
+    };
+
+    window.switchWeekday = function(day) {
+      activeWeekday = day;
+      renderWeekdays();
+      renderSchedule();
+    };
+
+    // ===== 课表编辑弹窗（原始/当前均可点击进入）=====
+    let scheduleEditMode = 'edit';
+    let scheduleEditIdx = -1;
+
+    window.openScheduleEdit = function(idx) {
+      scheduleEditMode = 'edit';
+      scheduleEditIdx = idx;
+      const item = scheduleOriginal[activeWeekday][idx];
+      document.getElementById('schedule-edit-title').textContent = activeWeekday + ' 第' + item.period + '节';
+      document.getElementById('se-subject').value = item.subject;
+      document.getElementById('se-time').value = item.time;
+      document.getElementById('se-room').value = item.room;
+      document.getElementById('se-note').value = item.note || '';
+      document.getElementById('se-delete').classList.remove('hidden');
+      document.getElementById('schedule-edit-modal').classList.remove('hidden');
+    };
+
+    window.openScheduleAdd = function() {
+      scheduleEditMode = 'add';
+      scheduleEditIdx = -1;
+      document.getElementById('schedule-edit-title').textContent = activeWeekday + ' 新增节次';
+      document.getElementById('se-subject').value = '';
+      document.getElementById('se-time').value = '';
+      document.getElementById('se-room').value = '';
+      document.getElementById('se-note').value = '';
+      document.getElementById('se-delete').classList.add('hidden');
+      document.getElementById('schedule-edit-modal').classList.remove('hidden');
+    };
+
+    window.closeScheduleEdit = function() {
+      document.getElementById('schedule-edit-modal').classList.add('hidden');
+    };
+
+    window.saveScheduleEdit = function() {
+      const subject = document.getElementById('se-subject').value.trim() || '未命名';
+      const time = document.getElementById('se-time').value.trim();
+      const room = document.getElementById('se-room').value.trim();
+      const note = document.getElementById('se-note').value.trim();
+      if (scheduleEditMode === 'add') {
+        const list = scheduleOriginal[activeWeekday];
+        const maxPeriod = list.reduce((m, p) => Math.max(m, p.period), 0);
+        const newItem = { period: maxPeriod + 1, time: time, subject: subject, room: room, note: note };
+        list.push(newItem);
+        if (note) {
+          scheduleChanges.unshift({ date: formatDateShort(getTodayStr()), weekday: activeWeekday, period: newItem.period, from: '—', to: subject, reason: note });
+        }
+      } else {
+        const item = scheduleOriginal[activeWeekday][scheduleEditIdx];
+        const prevSubject = item.subject;
+        const prevNote = item.note || '';
+        item.subject = subject; item.time = time; item.room = room; item.note = note; item.changed = !!note;
+        if (note && note !== prevNote) {
+          scheduleChanges.unshift({ date: formatDateShort(getTodayStr()), weekday: activeWeekday, period: item.period, from: prevSubject, to: subject, reason: note });
+        }
+      }
+      closeScheduleEdit();
+      renderSchedule();
+      renderScheduleChanges();
+    };
+
+    window.deleteScheduleEdit = function() {
+      if (scheduleEditMode === 'edit' && scheduleEditIdx >= 0) {
+        scheduleOriginal[activeWeekday].splice(scheduleEditIdx, 1);
+      }
+      closeScheduleEdit();
+      renderSchedule();
+    };
+
+    document.getElementById('schedule-original').addEventListener('click', function() {
+      scheduleMode = 'original';
+      this.className = 'flex-1 py-2 text-sm font-medium rounded-lg bg-white text-brand-600 shadow-sm';
+      document.getElementById('schedule-current').className = 'flex-1 py-2 text-sm font-medium rounded-lg text-gray-600';
+      renderSchedule();
+    });
+
+    document.getElementById('schedule-current').addEventListener('click', function() {
+      scheduleMode = 'current';
+      this.className = 'flex-1 py-2 text-sm font-medium rounded-lg bg-white text-brand-600 shadow-sm';
+      document.getElementById('schedule-original').className = 'flex-1 py-2 text-sm font-medium rounded-lg text-gray-600';
+      renderSchedule();
+    });
+
+    // ===== 渲染调课记录 =====
+    function renderScheduleChanges() {
+      const container = document.getElementById('schedule-change-list');
+      const countEl = document.getElementById('schedule-change-count');
+      if (countEl) countEl.textContent = '本学期 ' + scheduleChanges.length + ' 次';
+      if (!scheduleChanges.length) {
+        container.innerHTML = '<p class="text-xs text-gray-400 text-center py-3">暂无调课记录，填写调课说明后自动留痕</p>';
+        return;
+      }
+      container.innerHTML = scheduleChanges.map(item => `
+        <div class="bg-white rounded-xl p-3 shadow-sm">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm font-medium text-gray-800">${item.weekday ? item.weekday + ' 第' + item.period + '节 · ' : ''}${item.from} <span class="text-gray-400">→</span> ${item.to}</p>
+              <p class="text-xs text-gray-500 mt-0.5">原因：${item.reason}</p>
+            </div>
+            <span class="text-xs text-gray-400">${item.date}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ===== 导出当前班级学生名单 =====
+    window.exportAllStudents = function() {
+      const lines = students.map((s, i) => `${i + 1}. ${s.name}  组：第${s.group || 1}组  ${s.tags && s.tags.length ? '备注：' + s.tags.join('、') : ''}`);
+      const content = `【${currentClassName()}】学生名单\n共 ${students.length} 人\n\n${lines.join('\n')}`;
+      exportFile(`${currentClassName()}_学生名单.txt`, content);
+    };
+
+    // ===== 文件导出（原生壳内走 Capacitor Filesystem/Share，浏览器内走下载） =====
+    async function exportFile(filename, text) {
+      try {
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+          const Plugins = window.Capacitor.Plugins;
+          const res = await Plugins.Filesystem.writeFile({
+            path: filename,
+            data: text,
+            directory: 'DOCUMENTS',
+            encoding: 'utf8',
+            recursive: true
+          });
+          try {
+            await Plugins.Share.share({ title: filename, text: '已保存到手机「文档」目录：' + filename, url: res.uri, dialogTitle: '导出文件' });
+          } catch (e) {
+            alert('已保存到手机「文档」目录：' + filename);
+          }
+          return;
+        }
+      } catch (e) {}
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ===== 备份与恢复 =====
+    window.exportBackup = function() {
+      saveActiveClass();
+      const data = {
+        app: 'teacher-workbench',
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        classesData: classesData,
+        activeClassId: activeClassId,
+        teacherName: teacherName,
+        todos: todos,
+        scheduleOriginal: scheduleOriginal,
+        scheduleCurrent: scheduleCurrent,
+        scheduleChanges: scheduleChanges
+      };
+      exportFile('教师工作台备份_' + getTodayStr() + '.json', JSON.stringify(data, null, 2));
+    };
+
+    window.importBackup = function(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const p = JSON.parse(String(e.target.result));
+          if (!p || !p.classesData) { alert('备份文件格式不正确'); input.value = ''; return; }
+          if (!(await sheetConfirm({ title: '恢复备份', message: '恢复备份将覆盖当前全部数据，确定继续？', okText: '恢复', danger: true }))) { input.value = ''; return; }
+          classesData = p.classesData;
+          activeClassId = (p.activeClassId && classesData[p.activeClassId]) ? p.activeClassId : Object.keys(classesData)[0];
+          if (Array.isArray(p.todos)) todos = p.todos;
+          if (p.teacherName) teacherName = p.teacherName;
+          if (p.scheduleOriginal) scheduleOriginal = p.scheduleOriginal;
+          if (p.scheduleCurrent) scheduleCurrent = p.scheduleCurrent;
+          if (Array.isArray(p.scheduleChanges)) scheduleChanges = p.scheduleChanges;
+          loadActiveClass();
+          renderAllPages();
+          persist();
+          alert('恢复成功');
+        } catch (err) {
+          alert('恢复失败：文件无法解析');
+        }
+        input.value = '';
+      };
+      reader.readAsText(file, 'utf-8');
+    };
+
+    // ===== 通用底部弹层：输入（sheetInput）与确认（sheetConfirm），替代原生 prompt/confirm =====
+    let _sheetResolve = null;
+
+    function openSheet(opts) {
+      document.getElementById('sheet-title').textContent = opts.title || '';
+      const msg = document.getElementById('sheet-message');
+      msg.textContent = opts.message || '';
+      msg.classList.toggle('hidden', !opts.message);
+      const fields = opts.fields || [];
+      document.getElementById('sheet-fields').innerHTML = fields.map(f => `
+        <div>
+          <label class="text-xs text-gray-500">${f.label}</label>
+          <input id="sheet-field-${f.key}" type="${f.type || 'text'}" class="w-full mt-1 px-3 py-2.5 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="${f.placeholder || ''}" value="${f.value || ''}">
+        </div>
+      `).join('');
+      const btnWrap = document.getElementById('sheet-buttons');
+      btnWrap.innerHTML = opts.buttons.map((b, i) => `
+        <button id="sheet-btn-${i}" class="flex-1 py-3 rounded-xl text-sm font-medium ${b.style === 'danger' ? 'bg-red-50 text-red-600' : b.style === 'primary' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}">${b.text}</button>
+      `).join('');
+      opts.buttons.forEach((b, i) => {
+        document.getElementById('sheet-btn-' + i).onclick = () => { closeSheet(); if (b.onClick) b.onClick(collectSheetFields()); };
+      });
+      document.getElementById('sheet-modal').classList.remove('hidden');
+      if (fields.length) {
+        const first = document.getElementById('sheet-field-' + fields[0].key);
+        if (first) setTimeout(() => first.focus(), 260);
+      }
+    }
+    function collectSheetFields() {
+      const out = {};
+      document.querySelectorAll('[id^="sheet-field-"]').forEach(el => {
+        out[el.id.replace('sheet-field-', '')] = el.value;
+      });
+      return out;
+    }
+    function closeSheet() {
+      document.getElementById('sheet-modal').classList.add('hidden');
+    }
+    window.sheetBackdropTap = function() {
+      closeSheet();
+      if (_sheetResolve) { const r = _sheetResolve; _sheetResolve = null; r(null); }
+    };
+    window.sheetInput = function(opts) {
+      return new Promise(resolve => {
+        _sheetResolve = resolve;
+        openSheet({
+          title: opts.title,
+          message: opts.message,
+          fields: opts.fields,
+          buttons: [
+            { text: '取消', style: 'muted', onClick: () => { _sheetResolve = null; resolve(null); } },
+            { text: opts.okText || '确定', style: 'primary', onClick: (vals) => { _sheetResolve = null; resolve(vals); } }
+          ]
+        });
+      });
+    };
+    window.sheetConfirm = function(opts) {
+      return new Promise(resolve => {
+        _sheetResolve = resolve;
+        openSheet({
+          title: opts.title,
+          message: opts.message,
+          buttons: [
+            { text: '取消', style: 'muted', onClick: () => { _sheetResolve = null; resolve(false); } },
+            { text: opts.okText || '确定', style: opts.danger ? 'danger' : 'primary', onClick: () => { _sheetResolve = null; resolve(true); } }
+          ]
+        });
+      });
+    };
+
+    // ===== 首页（数据看板，全部来自真实本地数据） =====
+    let teacherName = '老师';
+
+    window.goStudentSub = function(type) {
+      switchPage('student');
+      showStudentSubpage(type);
+    };
+
+    window.editTeacherName = async function() {
+      const vals = await sheetInput({ title: '怎么称呼你？', fields: [{ key: 'name', label: '称呼', placeholder: '如 林老师', value: teacherName }], okText: '保存' });
+      if (!vals) return;
+      const name = vals.name.trim();
+      if (!name) return;
+      teacherName = name;
+      persist();
+      renderHome();
+    };
+
+    function renderHome() {
+      const greetingEl = document.getElementById('home-greeting');
+      if (!greetingEl) return;
+      const now = new Date();
+      const weekNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      // 问候语 + 称呼 + 日期
+      const hour = now.getHours();
+      greetingEl.textContent = hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好';
+      document.getElementById('home-teacher-name').textContent = teacherName;
+      const avatarEl = document.getElementById('home-avatar');
+      if (avatarEl) avatarEl.textContent = teacherName.charAt(0);
+      document.getElementById('home-date').textContent = `今天是 ${now.getMonth() + 1}月${now.getDate()}日 ${weekNames[now.getDay()]}`;
+      // 待办角标
+      const pending = todos.filter(t => !t.done);
+      const bell = document.getElementById('home-bell-badge');
+      if (bell) { bell.textContent = pending.length; bell.classList.toggle('hidden', pending.length === 0); }
+      const todoCountEl = document.getElementById('home-todo-count');
+      if (todoCountEl) todoCountEl.textContent = pending.length;
+      // 今日课程（按当前课表 + 上课时间估算已上/待上）
+      const todayWd = weekNames[now.getDay()];
+      const isWorkday = weekdays.indexOf(todayWd) !== -1;
+      const periods = isWorkday ? (scheduleCurrent[todayWd] || []) : [];
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      let ended = 0;
+      periods.forEach(p => {
+        const m = /(\d+):(\d+)\s*-\s*(\d+):(\d+)/.exec(p.time || '');
+        if (m && (+m[3]) * 60 + (+m[4]) <= nowMin) ended++;
+      });
+      document.getElementById('hs-classes').textContent = periods.length;
+      document.getElementById('hs-classes-sub').textContent = isWorkday ? `${ended}节已上 · ${periods.length - ended}节待上` : '今天没有排课';
+      // 待交作业 / 待订正（取最近一个有作业的日期）
+      const hwDates = [...new Set(homeworks.map(h => h.date).filter(Boolean))].sort();
+      const latestHwDate = hwDates.length ? (hwDates.indexOf(getTodayStr()) !== -1 ? getTodayStr() : hwDates[hwDates.length - 1]) : null;
+      let unsub = 0, needC = 0;
+      if (latestHwDate) {
+        homeworks.filter(h => h.date === latestHwDate).forEach(hw => {
+          students.forEach(s => {
+            const rec = s.homeworkRecords && s.homeworkRecords[hw.id];
+            const st = rec ? rec.status : 'unsubmitted';
+            if (st === 'unsubmitted' || st === 'makeup') unsub++;
+            if (rec && rec.correct === 'need') needC++;
+          });
+        });
+      }
+      document.getElementById('hs-hw').textContent = unsub;
+      document.getElementById('hs-hw-sub').textContent = latestHwDate ? `${formatDateLabel(latestHwDate)}的作业` : '还没布置作业';
+      document.getElementById('hs-correct').textContent = needC;
+      document.getElementById('hs-focus').textContent = students.filter(s => (s.tags || []).some(t => t.indexOf('关注') !== -1)).length;
+      // 今日待办列表（未完成在前，取前 5；点圆点或长按条目快速完成）
+      const listEl = document.getElementById('home-todo-list');
+      const top = pending.concat(todos.filter(t => t.done)).slice(0, 5);
+      listEl.innerHTML = top.length ? top.map(t => `
+        <div class="home-todo-item flex items-center py-2 px-1 rounded-xl" data-todo-id="${t.id}">
+          <button class="w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${t.done ? 'bg-green-500 border-green-500' : 'border-gray-300'}" onclick="toggleHomeTodo(${t.id}, event)">
+            ${t.done ? '<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+          </button>
+          <p class="text-sm ml-2.5 flex-1 min-w-0 truncate ${t.done ? 'text-gray-300 line-through' : 'text-gray-800'}">${escAttr(t.title) || '未命名待办'}</p>
+          <span class="text-xs text-gray-400 shrink-0 ml-2">${escAttr(t.time || '')}</span>
+        </div>
+      `).join('') : '<p class="text-xs text-gray-400 text-center py-3">待办都完成了，真利索</p>';
+      bindHomeTodoGestures();
+      // 本周范围（周一~周日）
+      const dow = (now.getDay() + 6) % 7;
+      const monday = new Date(now.getTime() - dow * 864e5);
+      const sunday = new Date(monday.getTime() + 6 * 864e5);
+      document.getElementById('home-week-range').textContent = `${monday.getMonth() + 1}.${monday.getDate()} – ${sunday.getMonth() + 1}.${sunday.getDate()}`;
+      const mondayStr = _fmtDate(monday), sundayStr = _fmtDate(sunday);
+      // 作业完成率
+      let total = 0, doneCnt = 0;
+      homeworks.forEach(hw => students.forEach(s => {
+        const rec = s.homeworkRecords && s.homeworkRecords[hw.id];
+        if (rec) { total++; if (rec.status !== 'unsubmitted') doneCnt++; }
+      }));
+      const rate = total ? Math.round(doneCnt / total * 100) : 0;
+      document.getElementById('home-rate').textContent = rate + '%';
+      document.getElementById('home-rate-bar').style.width = rate + '%';
+      document.getElementById('home-rate-sub').textContent = `共 ${homeworks.length} 次作业`;
+      // 最近考试平均分
+      const scoredExams = sortedExams().filter(e => students.some(s => typeof (s.scores || {})[e.id] === 'number'));
+      if (scoredExams.length) {
+        const ex = scoredExams[scoredExams.length - 1];
+        const entered = students.filter(s => typeof (s.scores || {})[ex.id] === 'number');
+        const avg = entered.reduce((sum, s) => sum + s.scores[ex.id], 0) / entered.length;
+        document.getElementById('home-exam-avg').textContent = avg.toFixed(1);
+        document.getElementById('home-exam-bar').style.width = Math.round(avg / ex.fullScore * 100) + '%';
+        document.getElementById('home-exam-sub').textContent = `《${ex.name}》`;
+      } else {
+        document.getElementById('home-exam-avg').textContent = '—';
+        document.getElementById('home-exam-bar').style.width = '0%';
+        document.getElementById('home-exam-sub').textContent = '暂无成绩';
+      }
+      // 本周随记柱状（按星期归集）+ 班级动态（最新随记）
+      const buckets = [0, 0, 0, 0, 0];
+      const feed = [];
+      students.forEach(s => (s.notes || []).forEach(n => {
+        feed.push({ name: s.name, text: n.text, date: n.date, id: n.id || 0 });
+        const d = new Date(n.date);
+        if (!isNaN(d) && n.date >= mondayStr && n.date <= sundayStr) buckets[(d.getDay() + 6) % 7]++;
+      }));
+      const maxB = Math.max.apply(null, buckets.concat([1]));
+      const wdLabels = ['一', '二', '三', '四', '五'];
+      document.getElementById('home-note-bars').innerHTML = buckets.map((v, i) => `
+        <div class="flex-1 flex flex-col items-center justify-end gap-0.5 h-full">
+          <div class="w-2 rounded-full ${v ? 'bg-amber-400' : 'bg-gray-100'}" style="height:${v ? Math.max(6, Math.round(v / maxB * 30)) : 3}px"></div>
+          <span class="text-[8px] text-gray-300">${wdLabels[i]}</span>
+        </div>
+      `).join('');
+      document.getElementById('home-notes-sub').textContent = `本周共 ${buckets.reduce((a, b) => a + b, 0)} 条`;
+      feed.sort((a, b) => a.date === b.date ? b.id - a.id : (a.date < b.date ? 1 : -1));
+      document.getElementById('home-feed').innerHTML = feed.length ? feed.slice(0, 4).map(n => `
+        <button class="w-full flex items-center p-3 text-left active:scale-[0.99] transition-transform" onclick="switchPage('student')">
+          <div class="w-7 h-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          </div>
+          <p class="text-xs text-gray-800 ml-2 flex-1 min-w-0 truncate"><span class="font-medium">${escAttr(n.name)}</span>　${escAttr(n.text)}</p>
+          <span class="text-[10px] text-gray-300 shrink-0 ml-2">${formatDateLabel(n.date)}</span>
+        </button>
+      `).join('') : '<p class="text-xs text-gray-400 text-center py-4">还没有动态，去学生页随手记一笔吧</p>';
+    }
+
+    // ===== 首页待办：点圆点 / 长按条目 快速完成 =====
+    let _lpTimer = null;
+    let _lpFired = false;
+
+    window.toggleHomeTodo = function(id, e) {
+      if (e) e.stopPropagation();
+      toggleTodo(id);
+      renderHome();
+    };
+
+    function bindHomeTodoGestures() {
+      document.querySelectorAll('.home-todo-item').forEach(el => {
+        const id = parseInt(el.dataset.todoId, 10);
+        const start = (e) => {
+          if (e.target && e.target.closest && e.target.closest('button')) return;
+          _lpFired = false;
+          clearTimeout(_lpTimer);
+          _lpTimer = setTimeout(() => {
+            _lpFired = true;
+            if (navigator.vibrate) navigator.vibrate(15);
+            toggleHomeTodo(id);
+          }, 480);
+        };
+        const cancel = () => clearTimeout(_lpTimer);
+        el.addEventListener('touchstart', start, { passive: true });
+        el.addEventListener('touchend', cancel);
+        el.addEventListener('touchmove', cancel);
+        el.addEventListener('touchcancel', cancel);
+        el.addEventListener('mousedown', start);
+        el.addEventListener('mouseup', cancel);
+        el.addEventListener('mouseleave', cancel);
+        el.addEventListener('click', (e) => {
+          if (_lpFired) { e.preventDefault(); e.stopPropagation(); _lpFired = false; return; }
+          if (e.target && e.target.closest && e.target.closest('button')) return;
+          switchPage('todo');
+        });
+      });
+    }
+
+    // ===== 初始化 =====
+    function init() {
+      loadAll();
+      loadActiveClass();
+      renderAllPages();
+    }
+
+    init();
+  </script>
+
+  <!-- 课表编辑弹窗（点击课表卡片进入） -->
+  <div id="schedule-edit-modal" class="hidden fixed inset-0 bg-black/40 z-40 flex items-end justify-center" onclick="if(event.target===this)closeScheduleEdit()">
+    <div class="modal-card bg-white w-full max-w-md rounded-t-2xl p-5 pb-7">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-gray-800" id="schedule-edit-title">编辑课程</h3>
+        <button class="text-gray-400 text-2xl leading-none" onclick="closeScheduleEdit()">×</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-gray-500">科目</label>
+          <input id="se-subject" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 语文">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">时间</label>
+          <input id="se-time" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 08:00-08:40">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">教室</label>
+          <input id="se-room" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 501">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">调课说明（留空=非调课）</label>
+          <input id="se-note" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 与体育调换">
+        </div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button id="se-delete" class="flex-none px-4 py-2.5 rounded-xl text-sm text-red-600 bg-red-50" onclick="deleteScheduleEdit()">删除</button>
+        <button class="flex-1 py-2.5 rounded-xl text-sm text-white bg-brand-600 font-medium" onclick="saveScheduleEdit()">保存</button>
+      </div>
+    </div>
+  </div>
+  <!-- 班级切换窗口 -->
+  <div id="class-window" class="hidden fixed inset-0 bg-black/40 z-40 flex items-end justify-center" onclick="if(event.target===this)closeClassWindow()">
+    <div class="modal-card bg-white w-full max-w-md rounded-t-2xl p-5 pb-7">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-gray-800">班级管理</h3>
+        <button class="text-gray-400 text-2xl leading-none" onclick="closeClassWindow()">×</button>
+      </div>
+      <div class="space-y-2 mb-4 max-h-80 overflow-y-auto" id="class-list"></div>
+      <button class="w-full py-2.5 rounded-xl text-sm text-white bg-brand-600 font-medium" onclick="addClass()">+ 新建班级</button>
+    </div>
+  </div>
+  <!-- 学生详情底弹层 -->
+  <div id="student-detail" class="hidden fixed inset-0 z-40 flex items-end justify-center bg-black/40" onclick="if(event.target===this)hideStudentDetail()">
+    <div class="modal-card bg-gray-50 w-full max-w-md rounded-t-3xl max-h-[85vh] overflow-y-auto pb-8">
+      <div class="pt-2 pb-1 flex justify-center"><div class="w-10 h-1 bg-gray-200 rounded-full"></div></div>
+      <div id="student-detail-content"></div>
+    </div>
+  </div>
+
+  <!-- 通用底部弹层（输入/确认） -->
+  <div id="sheet-modal" class="hidden fixed inset-0 z-50 flex items-end justify-center bg-black/40" onclick="if(event.target===this)sheetBackdropTap()">
+    <div class="modal-card bg-white w-full max-w-md rounded-t-3xl p-5 pb-8">
+      <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4"></div>
+      <h3 class="font-bold text-gray-900 text-lg mb-1" id="sheet-title"></h3>
+      <p class="text-sm text-gray-500 mb-4 leading-relaxed hidden" id="sheet-message"></p>
+      <div class="space-y-3 mb-5" id="sheet-fields"></div>
+      <div class="flex gap-3" id="sheet-buttons"></div>
+    </div>
+  </div>
+</body>
+</html>

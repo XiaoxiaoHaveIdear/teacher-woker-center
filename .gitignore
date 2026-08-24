@@ -1,0 +1,18 @@
+# 依赖与构建产物
+node_modules/
+dist/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/assets/public/
+
+# 签名密钥与密码（绝不入库）
+keystore/
+
+# 效果预览图（临时产物）
+/*预览*.png
+
+# 系统杂项
+.DS_Store
+Thumbs.db
