@@ -83,6 +83,13 @@
       transition: transform .26s cubic-bezier(.32,.72,.35,1);
     }
     #student-subpage.open { transform: translateX(0); }
+
+    /* 学生详情底弹层：定高 + 触屏滚动加固（安卓 WebView 对仅有 max-height 的滚动容器触摸滚动不稳） */
+    #student-detail .modal-card {
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
   </style>
 </head>
 <body class="bg-gray-200">
@@ -1603,10 +1610,12 @@
         </div>
       `;
       document.getElementById('student-detail').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
     };
 
     window.hideStudentDetail = function() {
       document.getElementById('student-detail').classList.add('hidden');
+      document.body.style.overflow = '';
     };
 
     window.toggleFocusTag = function() {
@@ -3049,7 +3058,7 @@
   </div>
   <!-- 学生详情底弹层 -->
   <div id="student-detail" class="hidden fixed inset-0 z-40 flex items-end justify-center bg-black/40" onclick="if(event.target===this)hideStudentDetail()">
-    <div class="modal-card bg-gray-50 w-full max-w-md rounded-t-3xl max-h-[85vh] overflow-y-auto pb-8">
+    <div class="modal-card bg-gray-50 w-full max-w-md rounded-t-3xl h-[85vh] overflow-y-auto pb-8">
       <div class="pt-2 pb-1 flex justify-center"><div class="w-10 h-1 bg-gray-200 rounded-full"></div></div>
       <div id="student-detail-content"></div>
     </div>
