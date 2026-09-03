@@ -33,6 +33,7 @@
     .page {
       display: none;
       animation: fadeIn 0.2s ease-out;
+      overflow-x: hidden;
     }
     .page.active {
       display: block;
@@ -262,10 +263,12 @@
     <div id="page-schedule" class="page">
       <div class="sticky top-0 z-10 bg-white/85 backdrop-blur-lg border-b border-gray-200/60">
       <div class="px-5 pt-8 pb-3">
-        <h1 class="text-[22px] font-bold text-gray-900 mb-3 tracking-tight">智能课程表</h1>
-        <div class="bg-gray-100 p-1 rounded-xl flex">
-          <button class="flex-1 py-2 text-sm font-medium rounded-lg bg-white text-brand-600 shadow-sm" id="schedule-original">原始课表</button>
-          <button class="flex-1 py-2 text-sm font-medium rounded-lg text-gray-600" id="schedule-current">当前课表</button>
+        <div class="flex items-center justify-between">
+          <h1 class="text-[22px] font-bold text-gray-900 tracking-tight">智能课程表</h1>
+          <div class="flex gap-2">
+            <button class="text-xs text-gray-600 border border-gray-200 bg-white px-3 py-1.5 rounded-full font-medium active:scale-95 transition-transform" onclick="openPeriodTimes()">⏱ 节次时间</button>
+            <button class="text-xs text-brand-600 border border-brand-300 bg-white px-3 py-1.5 rounded-full font-medium active:scale-95 transition-transform" onclick="ocrPickImage()">📷 导入课表</button>
+          </div>
         </div>
       </div>
 
@@ -279,10 +282,9 @@
 
       <!-- 课表内容 -->
       <div class="px-4 mt-3 mb-4">
-        <div class="bg-white rounded-2xl shadow-sm p-4">
-          <div class="space-y-3" id="schedule-list">
-            <!-- 动态生成 -->
-          </div>
+        <div id="next-course-card"></div>
+        <div id="schedule-list" class="space-y-0">
+          <!-- 动态生成 -->
         </div>
       </div>
 
@@ -300,45 +302,59 @@
 
     <!-- ========== 作业页面 ========== -->
     <div id="page-homework" class="page">
-      <div class="bg-white/85 backdrop-blur-lg px-5 pt-8 pb-4 sticky top-0 z-10 border-b border-gray-200/60">
-        <h1 class="text-[22px] font-bold text-gray-900 mb-3 tracking-tight">作业管理</h1>
-        <div class="class-bar mb-3"></div>
-        <!-- 日期选择条 -->
-        <div class="flex space-x-2 overflow-x-auto no-scrollbar mb-3" id="homework-date-filter">
-          <!-- 动态生成 -->
+      <div class="bg-white/85 backdrop-blur-lg px-5 pt-8 pb-3 sticky top-0 z-10 border-b border-gray-200/60">
+        <div class="flex items-center" id="hw-header-row">
+          <button id="hw-back-btn" class="hidden mr-2 w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center active:scale-95 transition-transform" onclick="exitHomeworkDetail()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          </button>
+          <h1 class="text-[22px] font-bold text-gray-900 tracking-tight">作业管理</h1>
         </div>
-        <div class="flex space-x-2 overflow-x-auto no-scrollbar mb-3" id="homework-tabs">
-          <!-- 动态生成 -->
+        <div id="hw-list-header">
+          <div class="class-bar my-3"></div>
+          <!-- 日期选择条 -->
+          <div class="flex space-x-2 overflow-x-auto no-scrollbar" id="homework-date-filter">
+            <!-- 动态生成 -->
+          </div>
         </div>
       </div>
 
       <div class="px-4 pb-32">
-        <!-- 当前作业卡片 -->
-        <div class="bg-white rounded-2xl shadow-sm p-4 mb-4" id="homework-detail">
-          <!-- 动态生成 -->
-        </div>
-
-        <!-- 状态筛选 -->
-        <div class="bg-gray-100 p-1 rounded-xl flex mb-3" id="hw-status-filter">
-          <!-- 动态生成 -->
-        </div>
-
-        <!-- 小组 Tab -->
-        <div class="flex space-x-2 overflow-x-auto no-scrollbar mb-3" id="hw-group-tabs">
-          <!-- 动态生成 -->
-        </div>
-
-        <!-- 学生作业列表 -->
-        <div class="bg-white rounded-2xl shadow-sm p-4">
-          <p class="text-xs text-gray-400 mb-2">批量操作（对当前小组生效）</p>
-          <div class="grid grid-cols-2 gap-2 mb-3">
-            <button class="py-2 rounded-xl text-xs font-medium bg-green-100 text-green-700 active:scale-95 transition-transform" onclick="batchSetHomeworkStatus('submitted')">一键已交</button>
-            <button class="py-2 rounded-xl text-xs font-medium bg-gray-100 text-gray-600 active:scale-95 transition-transform" onclick="batchSetHomeworkStatus('unsubmitted')">一键未交</button>
-            <button class="py-2 rounded-xl text-xs font-medium bg-brand-100 text-brand-700 active:scale-95 transition-transform" onclick="batchSetHomeworkCorrect('corrected')">一键已订正</button>
-            <button class="py-2 rounded-xl text-xs font-medium bg-red-100 text-red-700 active:scale-95 transition-transform" onclick="batchSetHomeworkCorrect('need')">一键未订正</button>
-          </div>
-          <div class="space-y-2" id="hw-student-list">
+        <!-- 列表视图：作业卡片竖向排列 -->
+        <div id="homework-list-view">
+          <div class="space-y-3 mt-3" id="homework-card-list">
             <!-- 动态生成 -->
+          </div>
+        </div>
+
+        <!-- 详情视图：单个作业的收缴操作 -->
+        <div id="homework-detail-view" class="hidden">
+          <!-- 当前作业卡片（紧凑） -->
+          <div class="bg-white rounded-2xl shadow-sm px-3 py-2.5 mt-3 mb-2" id="homework-detail">
+            <!-- 动态生成 -->
+          </div>
+
+          <!-- 状态筛选 -->
+          <div class="bg-gray-100 p-1 rounded-xl flex mb-2" id="hw-status-filter">
+            <!-- 动态生成 -->
+          </div>
+
+          <!-- 小组 Tab -->
+          <div class="flex space-x-2 overflow-x-auto no-scrollbar mb-2" id="hw-group-tabs">
+            <!-- 动态生成 -->
+          </div>
+
+          <!-- 学生作业列表 -->
+          <div class="bg-white rounded-2xl shadow-sm p-3">
+            <div class="flex items-center gap-1.5 mb-2.5">
+              <span class="text-[11px] text-gray-400 shrink-0">批量</span>
+              <button class="flex-1 py-1.5 rounded-lg text-[11px] font-medium bg-green-100 text-green-700 active:scale-95 transition-transform" onclick="batchSetHomeworkStatus('submitted')">全交</button>
+              <button class="flex-1 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 text-gray-600 active:scale-95 transition-transform" onclick="batchSetHomeworkStatus('unsubmitted')">全未交</button>
+              <button class="flex-1 py-1.5 rounded-lg text-[11px] font-medium bg-brand-100 text-brand-700 active:scale-95 transition-transform" onclick="batchSetHomeworkCorrect('corrected')">全已订正</button>
+              <button class="flex-1 py-1.5 rounded-lg text-[11px] font-medium bg-red-100 text-red-700 active:scale-95 transition-transform" onclick="batchSetHomeworkCorrect('need')">全未订正</button>
+            </div>
+            <div class="space-y-2" id="hw-student-list">
+              <!-- 动态生成 -->
+            </div>
           </div>
         </div>
       </div>
@@ -405,7 +421,7 @@
       </div>
 
       <!-- 批量导入弹窗 -->
-      <div id="import-modal" class="hidden fixed inset-0 z-40 flex items-end justify-center bg-black/40">
+      <div id="import-modal" class="hidden fixed inset-0 z-[60] flex items-end justify-center bg-black/40">
         <div class="modal-card bg-white w-full rounded-t-3xl p-5 pb-8">
           <div class="flex justify-between items-center mb-3">
             <h3 class="font-bold text-gray-800 text-lg">批量导入学生</h3>
@@ -592,36 +608,76 @@
     let seatOrder = [];
 
     let homeworks = [
-      { id: 'hw_1', subject: '语文', title: '课文背诵', deadline: '今天 08:00', date: _todayStr },
-      { id: 'hw_2', subject: '数学', title: '练习册 P12-15', deadline: '昨天 12:00', date: _yesterdayStr },
-      { id: 'hw_3', subject: '英语', title: '单词默写 Unit 3', deadline: '今天 08:00', date: _todayStr }
+      { id: 'hw_1', subject: '语文', title: '课文背诵', deadline: _todayStr + 'T08:00', date: _todayStr },
+      { id: 'hw_2', subject: '数学', title: '练习册 P12-15', deadline: _yesterdayStr + 'T12:00', date: _yesterdayStr },
+      { id: 'hw_3', subject: '英语', title: '单词默写 Unit 3', deadline: _todayStr + 'T08:00', date: _todayStr }
     ];
     let currentHomeworkId = 'hw_1';
     let currentHomeworkDate = _todayStr;
     let currentHomeworkFilter = 'all';
+    // 作业页视图模式：list=作业卡片列表（横滑），detail=单份作业收缴详情
+    let homeworkViewMode = 'list';
 
     const weekdays = ['周一', '周二', '周三', '周四', '周五'];
-    const weekdayDates = { '周一': 3, '周二': 4, '周三': 5, '周四': 6, '周五': 7 };
+    // 本周周一~周五的实际日期（如 3/2），按当前日期动态计算
+    function computeWeekDates() {
+      const today = new Date();
+      const dow = (today.getDay() + 6) % 7; // 周一=0
+      const mon = new Date(today);
+      mon.setDate(today.getDate() - dow);
+      const out = {};
+      weekdays.forEach((d, i) => {
+        const dt = new Date(mon);
+        dt.setDate(mon.getDate() + i);
+        out[d] = `${dt.getMonth() + 1}/${dt.getDate()}`;
+      });
+      return out;
+    }
+    let weekdayDates = computeWeekDates();
+    // 今天是周几（周末返回 null）
+    function todayWeekdayName() {
+      const dow = new Date().getDay();
+      return (dow >= 1 && dow <= 5) ? weekdays[dow - 1] : null;
+    }
+    // 解析 "08:00-08:40" → 分钟数
+    function parseTimeRange(t) {
+      const m = (t || '').match(/(\d{1,2})[:：.](\d{2})\s*[-~—–]\s*(\d{1,2})[:：.](\d{2})/);
+      if (!m) return null;
+      return { start: (+m[1]) * 60 + (+m[2]), end: (+m[3]) * 60 + (+m[4]) };
+    }
+
+    // ===== 节次时间模板（学校固定的每节课起止时间，可维护） =====
+    let periodTimes = {
+      1: '08:00-08:40', 2: '08:50-09:30', 3: '09:40-10:20', 4: '10:30-11:11',
+      5: '14:00-14:40', 6: '14:50-15:30', 7: '15:45-16:25', 8: '16:35-17:15'
+    };
+    // 场地类型
+    const ROOM_TYPES = ['教室', '录播室', '实验室', '音乐室', '美术室', '操场', '其他'];
+    function normalizeRoomType(item) {
+      if (!item.roomType) {
+        const old = item.room || '';
+        item.roomType = ROOM_TYPES.find(t => t !== '教室' && t !== '其他' && old.indexOf(t) !== -1) || '教室';
+      }
+      return item.roomType;
+    }
 
     function buildBaseSchedule() {
       const base = [
-        { period: 1, time: '08:00-08:40', subject: '语文', room: '501' },
-        { period: 2, time: '08:50-09:30', subject: '数学', room: '501' },
-        { period: 3, time: '09:40-10:20', subject: '英语', room: '501' },
-        { period: 4, time: '10:30-11:11', subject: '科学', room: '实验室' },
-        { period: 5, time: '14:00-14:40', subject: '班会', room: '501' },
-        { period: 6, time: '14:50-15:30', subject: '音乐', room: '音乐室' },
+        { period: 1, subject: '语文' },
+        { period: 2, subject: '数学' },
+        { period: 3, subject: '英语' },
+        { period: 4, subject: '科学' },
+        { period: 5, subject: '班会' },
+        { period: 6, subject: '音乐' },
       ];
       const obj = {};
-      weekdays.forEach(d => { obj[d] = base.map(p => ({ ...p })); });
+      weekdays.forEach(d => { obj[d] = base.map(p => ({ ...p, time: periodTimes[p.period] || '', roomType: '教室' })); });
       return obj;
     }
-    // 原始课表：学校下发的只读基线
-    let scheduleOriginal = buildBaseSchedule();
-    // 当前课表：可编辑的工作副本（初始与原始一致，可增删改、标记调课）
+    // 课表：周一~周五各一份节次列表
     let scheduleCurrent = buildBaseSchedule();
     scheduleCurrent['周一'][2].note = '与体育调换'; // 示例：周一第3节为调课
-    let activeWeekday = '周一';
+    let activeWeekday = todayWeekdayName() || '周一';
 
     let todos = [
       { id: 1, title: '检查红领巾佩戴', time: '07:30', done: true },
@@ -644,9 +700,9 @@
     };
 
     const correctMap = {
-      none: { label: '无需订正', class: 'text-gray-400' },
-      need: { label: '需订正', class: 'text-red-500 font-medium' },
-      corrected: { label: '已订正', class: 'text-green-600' },
+      none: { label: '无需订正', class: 'bg-gray-100 text-gray-500 border border-gray-200' },
+      need: { label: '需订正', class: 'bg-red-100 text-red-600 border border-red-200 font-medium' },
+      corrected: { label: '已订正', class: 'bg-green-100 text-green-700 border border-green-200' },
     };
 
     // ===== 日期/作业筛选工具 =====
@@ -677,6 +733,18 @@
       if (isNaN(d.getTime())) return dateStr;
       return `${d.getMonth() + 1}/${d.getDate()}`;
     }
+    // ===== 截止时间：datetime-local 值（YYYY-MM-DDTHH:mm），兼容旧文本格式 =====
+    function isDeadlineDatetime(s) { return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s || ''); }
+    function deadlineToInputValue(deadline, hwDate) {
+      if (isDeadlineDatetime(deadline)) return deadline.slice(0, 16);
+      const m = (deadline || '').match(/(\d{1,2}):(\d{2})/);
+      const time = m ? pad(+m[1]) + ':' + m[2] : '12:00';
+      return (hwDate || getTodayStr()) + 'T' + time;
+    }
+    function formatDeadline(deadline) {
+      if (!isDeadlineDatetime(deadline)) return deadline || '';
+      return formatDateLabel(deadline.slice(0, 10)) + ' ' + deadline.slice(11, 16);
+    }
     function getHomeworksByDate(dateStr) {
       if (!dateStr) return homeworks.slice();
       return homeworks.filter(h => h.date === dateStr);
@@ -700,6 +768,7 @@
       });
       
       if (pageName === 'home') renderHome();
+      if (pageName === 'homework') { homeworkViewMode = 'list'; renderHomeworkDetail(); }
       window.scrollTo(0, 0);
     }
 
@@ -711,33 +780,6 @@
     function getStudentHwStatus(student) {
       const rec = student.homeworkRecords && student.homeworkRecords[currentHomeworkId];
       return rec || { status: 'unsubmitted', correct: 'none' };
-    }
-
-    // ===== 作业页：渲染作业选择器 Tab =====
-    function renderHomeworkTabs() {
-      const container = document.getElementById('homework-tabs');
-      if (!container) return;
-      const list = getHomeworksByDate(currentHomeworkDate);
-      if (!list.length) {
-        container.innerHTML = '<span class="text-sm text-gray-400 py-2">该日期暂无作业</span>';
-        return;
-      }
-      container.innerHTML = list.map(hw => {
-        const isActive = hw.id === currentHomeworkId;
-        const unsub = students.filter(s => {
-          const rec = s.homeworkRecords && s.homeworkRecords[hw.id];
-          const st = rec || { status: 'unsubmitted', correct: 'none' };
-          return st.status === 'unsubmitted' || st.status === 'makeup';
-        }).length;
-        return `
-          <button class="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${isActive ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" onclick="switchHomework('${hw.id}')">
-            ${escAttr(hw.subject)}
-            ${unsub > 0 ? `<span class="ml-1 ${isActive ? 'bg-white text-brand-600' : 'bg-red-500 text-white'} text-xs px-1.5 py-0.5 rounded-full">${unsub}</span>` : ''}
-          </button>
-        `;
-      }).join('') + `
-        <button class="flex-shrink-0 w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg" onclick="addHomework()">+</button>
-      `;
     }
 
     // ===== 作业页：渲染日期选择条 =====
@@ -804,10 +846,76 @@
       renderHomeworkStudentList();
     };
 
+    // ===== 作业页：渲染作业卡片列表（竖向排列，可上下滚动） =====
+    function renderHomeworkCards() {
+      const container = document.getElementById('homework-card-list');
+      if (!container) return;
+      const list = getHomeworksByDate(currentHomeworkDate);
+      const cards = list.map(hw => {
+        const total = students.length;
+        const unsub = students.filter(s => {
+          const rec = s.homeworkRecords && s.homeworkRecords[hw.id];
+          const st = rec || { status: 'unsubmitted', correct: 'none' };
+          return st.status === 'unsubmitted' || st.status === 'makeup';
+        }).length;
+        const needCorrect = students.filter(s => {
+          const rec = s.homeworkRecords && s.homeworkRecords[hw.id];
+          return rec && rec.correct === 'need';
+        }).length;
+        const done = total - unsub;
+        const pct = total ? Math.round(done / total * 100) : 0;
+        return `
+          <div class="bg-white rounded-2xl shadow-sm p-4 active:scale-[0.98] transition-transform cursor-pointer" onclick="enterHomeworkDetail('${hw.id}')">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-1 rounded-lg shrink-0">${escAttr(hw.subject)}</span>
+                <p class="font-bold text-gray-800 text-sm truncate">${escAttr(hw.title)}</p>
+              </div>
+              <span class="text-[11px] text-gray-400 shrink-0 ml-2">${formatDateLabel(hw.date)}</span>
+            </div>
+            <p class="text-[11px] text-gray-400 mb-3">截止 ${escAttr(formatDeadline(hw.deadline))}</p>
+            <div class="flex justify-between text-[11px] text-gray-400 mb-1"><span>已交 ${done}/${total}</span><span class="font-medium ${unsub > 0 ? 'text-orange-600' : 'text-green-600'}">${unsub > 0 ? '未交 ' + unsub + '人' : '已收齐'}</span></div>
+            <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2"><div class="h-full bg-green-500 rounded-full" style="width:${pct}%"></div></div>
+            <div class="flex items-center justify-between">
+              ${needCorrect > 0 ? `<span class="text-[11px] font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-lg">需订正 ${needCorrect}人</span>` : '<span></span>'}
+              <span class="text-[11px] text-gray-300">点击查看 ›</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+      container.innerHTML = cards + `
+        <div class="rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 py-4 active:scale-[0.98] transition-transform cursor-pointer" onclick="addHomework()">
+          <span class="text-lg mr-1">+</span>
+          <span class="text-sm">添加作业</span>
+        </div>
+      `;
+    }
+
+    window.enterHomeworkDetail = function(homeworkId) {
+      currentHomeworkId = homeworkId;
+      homeworkViewMode = 'detail';
+      renderHomeworkDetail();
+    };
+
+    window.exitHomeworkDetail = function() {
+      homeworkViewMode = 'list';
+      renderHomeworkDetail();
+    };
+
     // ===== 作业页：渲染当前作业卡片 + 小组 Tab + 学生列表 =====
     function renderHomeworkDetail() {
       renderHomeworkDateFilter();
-      renderHomeworkTabs();
+      renderHomeworkCards();
+      const isList = homeworkViewMode === 'list';
+      const listView = document.getElementById('homework-list-view');
+      const detailView = document.getElementById('homework-detail-view');
+      const backBtn = document.getElementById('hw-back-btn');
+      const listHeader = document.getElementById('hw-list-header');
+      if (listView) listView.classList.toggle('hidden', !isList);
+      if (detailView) detailView.classList.toggle('hidden', isList);
+      if (backBtn) backBtn.classList.toggle('hidden', isList);
+      if (listHeader) listHeader.classList.toggle('hidden', !isList);
+      if (isList) return;
       renderHomeworkStatusFilter();
       const detailContainer = document.getElementById('homework-detail');
       if (!detailContainer) return;
@@ -816,7 +924,7 @@
       const studentList = document.getElementById('hw-student-list');
       if (!hw) {
         detailContainer.innerHTML = `
-          <div class="text-center py-6">
+          <div class="text-center py-4">
             <p class="text-sm text-gray-500 mb-3">该日期暂无作业</p>
             <button class="text-sm text-brand-600 bg-brand-50 px-4 py-2 rounded-xl" onclick="addHomework()">+ 添加一份作业</button>
           </div>
@@ -830,28 +938,23 @@
         return st.status === 'unsubmitted' || st.status === 'makeup';
       }).length;
       const totalNeedCorrect = students.filter(s => getStudentHwStatus(s).correct === 'need').length;
+      const doneCount = students.length - totalUnsub;
+      const pct = students.length ? Math.round(doneCount / students.length * 100) : 0;
       detailContainer.innerHTML = `
-        <div class="flex justify-between items-start mb-3">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <input class="text-lg font-bold text-gray-800 bg-transparent border-b border-transparent focus:border-brand-300 outline-none w-20" value="${escAttr(hw.subject)}" onchange="updateHomework('${hw.id}', 'subject', this.value)" placeholder="科目">
-              <span class="text-xs text-gray-400">·</span>
-              <input class="text-sm font-medium text-gray-600 bg-transparent border-b border-transparent focus:border-brand-300 outline-none flex-1" value="${escAttr(hw.title)}" onchange="updateHomework('${hw.id}', 'title', this.value)" placeholder="作业内容">
-            </div>
-            <div class="flex items-center gap-3 mt-2 flex-wrap">
-              <p class="text-xs text-gray-500">截止时间：<input class="bg-transparent border-b border-transparent focus:border-brand-300 outline-none" value="${escAttr(hw.deadline)}" onchange="updateHomework('${hw.id}', 'deadline', this.value)"></p>
-              <p class="text-xs text-gray-500">日期：<input type="date" class="bg-transparent border-b border-transparent focus:border-brand-300 outline-none text-gray-600" value="${hw.date || ''}" onchange="updateHomework('${hw.id}', 'date', this.value)"></p>
-            </div>
-          </div>
-          <div class="text-right ml-3 shrink-0">
-            <span class="text-sm font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg block mb-1">未交 ${totalUnsub}人</span>
-            ${totalNeedCorrect > 0 ? `<span class="text-sm font-medium text-red-600 bg-red-50 px-2 py-1 rounded-lg block">需订正 ${totalNeedCorrect}人</span>` : ''}
-            <button class="block mt-2 text-xs text-red-500" onclick="deleteHomework('${hw.id}')">删除作业</button>
-          </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <input class="text-sm font-bold text-brand-600 bg-brand-50 rounded-lg px-2 py-1 outline-none w-16 text-center shrink-0" value="${escAttr(hw.subject)}" onchange="updateHomework('${hw.id}', 'subject', this.value)" placeholder="科目">
+          <input class="text-sm font-medium text-gray-800 bg-transparent border-b border-transparent focus:border-brand-300 outline-none flex-1 min-w-0" value="${escAttr(hw.title)}" onchange="updateHomework('${hw.id}', 'title', this.value)" placeholder="作业内容">
+          <button class="shrink-0 text-xs text-red-400 px-1" onclick="deleteHomework('${hw.id}')">删除</button>
         </div>
-        <div class="mt-1">
-          <div class="flex justify-between text-xs text-gray-400 mb-1.5"><span>收缴进度</span><span class="font-medium text-gray-600">已交 ${students.length - totalUnsub}/${students.length}</span></div>
-          <div class="h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-green-500 rounded-full transition-all duration-300" style="width:${students.length ? Math.round((students.length - totalUnsub) / students.length * 100) : 0}%"></div></div>
+        <div class="flex items-center gap-3 text-[11px] text-gray-400 mb-1.5 flex-wrap">
+          <span class="flex items-center">截止 <input type="datetime-local" class="bg-transparent outline-none text-gray-500 text-[11px] ml-0.5" value="${deadlineToInputValue(hw.deadline, hw.date)}" onchange="updateHomework('${hw.id}', 'deadline', this.value)"></span>
+          <span class="flex items-center">日期 <input type="date" class="bg-transparent outline-none text-gray-500 text-[11px] ml-0.5" value="${hw.date || ''}" onchange="updateHomework('${hw.id}', 'date', this.value)"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-green-500 rounded-full transition-all duration-300" style="width:${pct}%"></div></div>
+          <span class="text-[11px] text-gray-500 shrink-0">已交 ${doneCount}/${students.length}</span>
+          ${totalUnsub > 0 ? `<span class="text-[11px] font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded shrink-0">未交 ${totalUnsub}</span>` : ''}
+          ${totalNeedCorrect > 0 ? `<span class="text-[11px] font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded shrink-0">需订正 ${totalNeedCorrect}</span>` : ''}
         </div>
       `;
       renderHomeworkGroupTabs();
@@ -901,14 +1004,14 @@
       container.innerHTML = groupStudents.map(student => {
         const st = getStudentHwStatus(student);
         return `
-          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl">
             <div class="flex items-center">
               <div class="w-9 h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3">
                 ${student.avatar}
               </div>
               <div>
-                <p class="font-medium text-gray-800 text-sm">${student.name}</p>
-                <p class="text-xs ${correctMap[st.correct].class} cursor-pointer" onclick="toggleHomeworkCorrect(${student.id})">${correctMap[st.correct].label}</p>
+                <p class="font-medium text-gray-800 text-sm mb-1">${student.name}</p>
+                <button class="px-2.5 py-1 rounded-lg text-xs active:scale-95 transition-transform ${correctMap[st.correct].class}" onclick="toggleHomeworkCorrect(${student.id})">${correctMap[st.correct].label}</button>
               </div>
             </div>
             <button class="px-3 py-1.5 rounded-lg text-xs font-medium ${statusMap[st.status].class}" onclick="toggleHomeworkStatus(${student.id})">
@@ -918,11 +1021,6 @@
         `;
       }).join('');
     }
-
-    window.switchHomework = function(homeworkId) {
-      currentHomeworkId = homeworkId;
-      renderHomeworkDetail();
-    };
 
     window.switchHomeworkGroup = function(groupId) {
       currentGroup = groupId;
@@ -989,12 +1087,13 @@
     };
 
     window.addHomework = async function() {
+      const date = currentHomeworkDate || getTodayStr();
       const vals = await sheetInput({
         title: '添加作业',
         fields: [
           { key: 'subject', label: '科目', value: '语文' },
           { key: 'title', label: '作业内容', placeholder: '如 练习册 P12-15' },
-          { key: 'deadline', label: '截止时间', value: '今天 12:00' }
+          { key: 'deadline', label: '截止时间', type: 'datetime-local', value: date + 'T12:00' }
         ],
         okText: '添加'
       });
@@ -1002,15 +1101,15 @@
       const subject = vals.subject.trim();
       if (!subject) return;
       const title = vals.title.trim() || '新作业';
-      const deadline = vals.deadline.trim() || '今天 12:00';
+      const deadline = vals.deadline || (date + 'T12:00');
       const id = 'hw_' + Date.now();
-      const date = currentHomeworkDate || getTodayStr();
       homeworks.push({ id, subject, title, deadline, date });
       students.forEach(s => {
         if (!s.homeworkRecords) s.homeworkRecords = {};
         s.homeworkRecords[id] = { status: 'unsubmitted', correct: 'none' };
       });
       currentHomeworkId = id;
+      homeworkViewMode = 'detail';
       renderHomeworkDetail();
       persist();
     };
@@ -1557,7 +1656,7 @@
               <p class="text-[11px] text-gray-400 mt-0.5">${escAttr(currentClassName())} ｜ 学号 ${String(s.id).padStart(2, '0')} ｜ ${seatIdx >= 0 ? '座位号 ' + (seatIdx + 1) : '未排座'}</p>
             </div>
             <button class="text-gray-400 p-1 shrink-0" onclick="hideStudentDetail()">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
           </div>
           <div class="bg-white rounded-2xl shadow-sm p-4 mb-3">
@@ -1684,8 +1783,8 @@
                 <button class="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm" onclick="changeSeatCols(1)">+</button>
               </div>
             </div>
-            <div id="seat-grid"></div>
-            <p class="text-[10px] text-gray-400 text-center mt-2">课桌两两一组 · 中间为过道 · 前排靠近黑板</p>
+            <div id="seat-grid" class="cursor-zoom-in" onclick="openSeatZoom()"></div>
+            <p class="text-[10px] text-gray-400 text-center mt-2">课桌两两一组 · 中间为过道 · 前排靠近黑板 · 点击座位图放大横屏查看</p>
           </div>
           <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
             <div class="flex justify-between items-center mb-3">
@@ -1738,7 +1837,11 @@
     let constraintIdSeq = 3;
 
     function studentOptions(selected) {
-      return studentNames.map(n => `<option value="${n}" ${n === selected ? 'selected' : ''}>${n}</option>`).join('');
+      return studentNames.map(n => {
+        const s = students.find(x => x.name === n);
+        const tagText = s && (s.tags || []).length ? '（' + s.tags.join('、') + '）' : '';
+        return `<option value="${n}" ${n === selected ? 'selected' : ''}>${n}${tagText}</option>`;
+      }).join('');
     }
 
     function renderSeatConstraints() {
@@ -1758,7 +1861,7 @@
             <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" onchange="updateConstraint(${c.id}, 'b', this.value)">${studentOptions(c.b)}</select>
             <span class="text-xs text-gray-500">${c.type === 'notTogether' ? '不能同桌' : '必须同桌'}</span>`;
         } else {
-          const label = c.type === 'frontRow' ? '必须前排' : '必须后排';
+          const label = c.type === 'frontRow' ? '必须前三排' : '必须后排';
           fields = `
             <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" onchange="updateConstraint(${c.id}, 'name', this.value)">${studentOptions(c.name)}</select>
             <span class="text-xs text-gray-500">${label}</span>`;
@@ -1768,8 +1871,8 @@
             <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" onchange="updateConstraintType(${c.id}, this.value)">
               <option value="notTogether" ${c.type === 'notTogether' ? 'selected' : ''}>不能同桌</option>
               <option value="together" ${c.type === 'together' ? 'selected' : ''}>必须同桌</option>
-              <option value="frontRow" ${c.type === 'frontRow' ? 'selected' : ''}>必须前排</option>
-              <option value="backRow" ${c.type === 'backRow' ? 'selected' : ''}>必须后排</option>
+              <option value="frontRow" ${c.type === 'frontRow' ? 'selected' : ''}>必须前三排</option>
+              ${c.type === 'backRow' ? '<option value="backRow" selected>必须后排（旧）</option>' : ''}
             </select>
             ${fields}
             <button class="ml-auto text-gray-400 p-1" onclick="removeConstraint(${c.id})" aria-label="删除">
@@ -1821,12 +1924,80 @@
     let seatRows = 4;
     let seatCols = 4;
 
+    // 标签对应圆点颜色：近视红、过敏橙、重点关注黄、其他灰
+    function seatTagColor(t) {
+      if (t.indexOf('近视') !== -1) return '#ef4444';
+      if (t.indexOf('过敏') !== -1) return '#f97316';
+      if (t.indexOf('关注') !== -1) return '#eab308';
+      return '#9ca3af';
+    }
+    function seatTagDots(s) {
+      const tags = s.tags || [];
+      if (!tags.length) return '';
+      const dots = tags.slice(0, 3).map(t => `<span style="width:5px;height:5px;border-radius:9999px;background:${seatTagColor(t)}"></span>`).join('');
+      return `<span class="absolute top-0.5 right-0.5 flex gap-0.5">${dots}</span>`;
+    }
+
     function defaultSeatOrder() {
       const arr = students.map(s => s.id);
       const total = seatRows * seatCols;
       while (arr.length < total) arr.push(null);
       return arr.slice(0, total);
     }
+
+    // 构建座位网格 HTML（big=true 用于全屏横屏放大查看）
+    function buildSeatGridHtml(big) {
+      // 列模板：两两一组，组间插入窄列当过道（0.32fr），最左一窄列为排号
+      const parts = [big ? '22px' : '16px'];
+      for (let c = 0; c < seatCols; c++) {
+        if (c > 0 && c % 2 === 0) parts.push('0.32fr');
+        parts.push('1fr');
+      }
+      const deskTextCls = big ? 'text-sm' : (seatCols >= 6 ? 'text-[10px]' : 'text-[11px]');
+      const rowNumCls = big ? 'text-xs' : 'text-[10px]';
+
+      let cells = '';
+      for (let r = 0; r < seatRows; r++) {
+        cells += `<div class="flex items-center justify-center ${rowNumCls} text-gray-400">${r + 1}</div>`;
+        for (let c = 0; c < seatCols; c++) {
+          if (c > 0 && c % 2 === 0) cells += '<div></div>';
+          const idx = r * seatCols + c;
+          const id = seatOrder[idx];
+          const seat = id ? students.find(s => s.id === id) : null;
+          const delay = Math.min(idx * 12, 420);
+          cells += seat
+            ? `<div class="relative aspect-[5/4] rounded-lg bg-[#fdf3d7] border border-[#e8d3a3] border-b-[3px] flex items-center justify-center px-0.5" style="animation: fadeIn .3s ${delay}ms both">${seatTagDots(seat)}<span class="${deskTextCls} leading-tight font-medium text-gray-800 text-center">${seat.name}</span></div>`
+            : `<div class="aspect-[5/4] rounded-lg border border-dashed border-gray-300 bg-white/50 flex items-center justify-center" style="animation: fadeIn .3s ${delay}ms both"><span class="${big ? 'text-xs' : 'text-[10px]'} text-gray-300">空</span></div>`;
+        }
+      }
+
+      // 图例：只列出本班实际出现的标签
+      const legendDefs = [['近视', '#ef4444'], ['过敏', '#f97316'], ['重点关注', '#eab308'], ['其他标签', '#9ca3af']];
+      const legend = legendDefs.filter(([k]) => students.some(s => (s.tags || []).some(t => k === '其他标签' ? (t.indexOf('近视') === -1 && t.indexOf('过敏') === -1 && t.indexOf('关注') === -1) : t.indexOf(k) !== -1)));
+      const legendHtml = legend.length
+        ? `<div class="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-2.5">${legend.map(([k, color]) => `<span class="flex items-center ${big ? 'text-xs' : 'text-[10px]'} text-gray-500"><span class="inline-block mr-1" style="width:6px;height:6px;border-radius:9999px;background:${color}"></span>${k}</span>`).join('')}</div>`
+        : '';
+
+      return `
+        <div class="rounded-xl p-3" style="background:#f7f3ea">
+          <div class="grid" style="grid-template-columns: ${parts.join(' ')}; gap: ${big ? '10px 8px' : '7px 6px'};">${cells}</div>
+          ${legendHtml}
+        </div>
+      `;
+    }
+
+    // ===== 座位图全屏横屏放大查看 =====
+    window.openSeatZoom = function() {
+      document.getElementById('seat-zoom-content').innerHTML = `
+        <div class="w-3/5 h-9 mx-auto mb-1.5 rounded-md flex items-center justify-center text-[11px] tracking-[0.3em] text-green-50" style="background:#3b5e4b; box-shadow: inset 0 0 0 3px #d8c39a">黑板</div>
+        ${buildSeatGridHtml(true)}
+      `;
+      document.getElementById('seat-zoom-modal').classList.remove('hidden');
+    };
+
+    window.closeSeatZoom = function() {
+      document.getElementById('seat-zoom-modal').classList.add('hidden');
+    };
 
     function renderSeatGrid() {
       persist();
@@ -1844,34 +2015,10 @@
         seatOrder = defaultSeatOrder();
       }
 
-      // 列模板：两两一组，组间插入窄列当过道（0.32fr），最左一窄列为排号
-      const parts = ['16px'];
-      for (let c = 0; c < seatCols; c++) {
-        if (c > 0 && c % 2 === 0) parts.push('0.32fr');
-        parts.push('1fr');
-      }
-      const deskTextCls = seatCols >= 6 ? 'text-[10px]' : 'text-[11px]';
-
-      let cells = '';
-      for (let r = 0; r < seatRows; r++) {
-        cells += `<div class="flex items-center justify-center text-[10px] text-gray-400">${r + 1}</div>`;
-        for (let c = 0; c < seatCols; c++) {
-          if (c > 0 && c % 2 === 0) cells += '<div></div>';
-          const idx = r * seatCols + c;
-          const id = seatOrder[idx];
-          const seat = id ? students.find(s => s.id === id) : null;
-          const delay = Math.min(idx * 12, 420);
-          cells += seat
-            ? `<div class="aspect-[5/4] rounded-lg bg-[#fdf3d7] border border-[#e8d3a3] border-b-[3px] flex items-center justify-center px-0.5" style="animation: fadeIn .3s ${delay}ms both"><span class="${deskTextCls} leading-tight font-medium text-gray-800 text-center">${seat.name}</span></div>`
-            : `<div class="aspect-[5/4] rounded-lg border border-dashed border-gray-300 bg-white/50 flex items-center justify-center" style="animation: fadeIn .3s ${delay}ms both"><span class="text-[10px] text-gray-300">空</span></div>`;
-        }
-      }
-
-      gridContainer.innerHTML = `
-        <div class="rounded-xl p-3" style="background:#f7f3ea">
-          <div class="grid" style="grid-template-columns: ${parts.join(' ')}; gap: 7px 6px;">${cells}</div>
-        </div>
-      `;
+      gridContainer.innerHTML = buildSeatGridHtml(false);
+      // 放大视图打开时同步刷新
+      const zoomModal = document.getElementById('seat-zoom-modal');
+      if (zoomModal && !zoomModal.classList.contains('hidden')) openSeatZoom();
     }
 
     window.changeSeatRows = function(delta) {
@@ -1910,7 +2057,8 @@
       const i = arr.indexOf(s.id);
       if (i === -1) return true;
       const r = Math.floor(i / seatCols);
-      if (c.type === 'frontRow') return r === 0;
+      // “前排” = 前三排
+      if (c.type === 'frontRow') return r <= Math.min(2, seatRows - 1);
       if (c.type === 'backRow') return r === seatRows - 1;
       return true;
     }
@@ -1921,20 +2069,119 @@
         alert('座位数不够（' + students.length + ' 名学生 / ' + total + ' 个座位），请先增加行或列。');
         return;
       }
-      const ids = students.map(s => s.id);
-      const pad = () => Array(total - ids.length).fill(null);
-      for (let t = 0; t < 300; t++) {
-        const arr = ids.slice().sort(() => Math.random() - 0.5).concat(pad());
-        if (seatConstraints.every(c => seatConstraintOk(c, arr))) {
-          seatOrder = arr;
+      const byName = n => students.find(s => s.name === n);
+      const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+      // 两两一组的同桌位：[左格, 右格]
+      const pairSlots = [];
+      for (let r = 0; r < seatRows; r++) for (let c = 0; c + 1 < seatCols; c += 2) pairSlots.push([r * seatCols + c, r * seatCols + c + 1]);
+      // 实际会用到的区域：坐满所需的前 N 个同桌位（约束学生也不许超出，否则会在中后排留下空洞）
+      const usablePairSlots = pairSlots.slice(0, Math.ceil(students.length / 2));
+      const usableIdx = new Set();
+      usablePairSlots.forEach(([i, j]) => { usableIdx.add(i); usableIdx.add(j); });
+      // 构造式摆放：先满足硬约束（同桌/前三排/不同桌），再随机填充，多试几轮
+      for (let t = 0; t < 200; t++) {
+        const seats = new Array(total).fill(null);
+        const used = new Set();
+        let ok = true;
+        const freeIdx = () => seats.map((v, i) => v === null ? i : -1).filter(i => i !== -1);
+        const place = (stu, idx) => { seats[idx] = stu.id; used.add(stu.id); };
+        const pairGroupOf = i => Math.floor(i / seatCols) * 100 + Math.floor((i % seatCols) / 2);
+        // 1) 必须同桌（在会用到的区域内随机选一桌）
+        for (const c of seatConstraints.filter(x => x.type === 'together')) {
+          const a = byName(c.a), b = byName(c.b);
+          if (!a || !b || a.id === b.id || used.has(a.id) || used.has(b.id)) continue;
+          const slot = rand(usablePairSlots.filter(([i, j]) => seats[i] === null && seats[j] === null));
+          if (!slot) { ok = false; break; }
+          place(a, slot[0]); place(b, slot[1]);
+        }
+        if (!ok) continue;
+        // 2) 必须前三排 / 必须后排（旧数据兼容）；优先给有成桌条件的格子，避免奇数列最后一列的单座
+        for (const c of seatConstraints.filter(x => x.type === 'frontRow' || x.type === 'backRow')) {
+          const s = byName(c.name);
+          if (!s || used.has(s.id)) continue;
+          const lastRow = c.type === 'frontRow' ? Math.min(2, seatRows - 1) : seatRows - 1;
+          const spots = [];
+          for (let row = 0; row <= lastRow; row++) {
+            for (let col = 0; col < seatCols; col++) { const i = row * seatCols + col; if (seats[i] === null) spots.push(i); }
+          }
+          const pairedSpots = spots.filter(i => (seatCols % 2 === 0) || (i % seatCols) < seatCols - 1);
+          const pool = pairedSpots.length ? pairedSpots : spots;
+          if (!pool.length) { ok = false; break; }
+          place(s, rand(pool));
+        }
+        if (!ok) continue;
+        // 3) 不能同桌：两人放进区域内不同的两两组
+        for (const c of seatConstraints.filter(x => x.type === 'notTogether')) {
+          const a = byName(c.a), b = byName(c.b);
+          if (!a || !b || a.id === b.id) continue;
+          for (const s of [a, b]) {
+            if (used.has(s.id)) continue;
+            const other = s === a ? b : a;
+            const otherIdx = seats.indexOf(other.id);
+            let cand = freeIdx().filter(i => usableIdx.has(i));
+            if (otherIdx !== -1) cand = cand.filter(i => pairGroupOf(i) !== pairGroupOf(otherIdx));
+            if (!cand.length) cand = freeIdx(); // 区域放不下时兜底
+            if (otherIdx !== -1) cand = cand.filter(i => pairGroupOf(i) !== pairGroupOf(otherIdx));
+            if (!cand.length) { ok = false; break; }
+            place(s, rand(cand));
+          }
+          if (!ok) break;
+        }
+        if (!ok) continue;
+        // 4) 其余学生随机填空位：
+        //    a. 先补满只坐了 1 人的桌位（凑成同桌）
+        //    b. 再按整桌两两安排，严格从前往后填充——前排没坐满就不坐后排，空位只集中在最后面且空整桌
+        //    c. 学生顺序完全随机（谁坐前谁坐后随机），双数人数保证人人有同桌
+        //    d. 奇数列最后一列的单座只在桌位坐满后才启用
+        const queue = students.filter(s => !used.has(s.id)).sort(() => Math.random() - 0.5);
+        const halfSpots = [];
+        const wholeSlots = [];
+        pairSlots.forEach(([i, j]) => {
+          const fi = seats[i] === null, fj = seats[j] === null;
+          if (fi && fj) wholeSlots.push([i, j]);
+          else if (fi) halfSpots.push(i);
+          else if (fj) halfSpots.push(j);
+        });
+        // 4a) 补半空桌（从前往后）
+        halfSpots.sort((a, b) => a - b);
+        for (const idx of halfSpots) {
+          if (!queue.length) break;
+          const s = queue.shift();
+          seats[idx] = s.id; used.add(s.id);
+        }
+        // 4b) 整桌填充：严格从前往后、从左到右——前排没坐满不坐后排，空位只集中在最后面且空整桌；
+        //     同桌内左右随机，人员顺序完全随机（谁坐前谁坐后随机）
+        wholeSlots.sort((a, b) => a[0] - b[0]);
+        for (const [i, j] of wholeSlots) {
+          if (!queue.length) break;
+          const s1 = queue.shift();
+          const s2 = queue.length ? queue.shift() : null;
+          if (s2 && Math.random() < 0.5) {
+            seats[i] = s2.id; seats[j] = s1.id; used.add(s1.id); used.add(s2.id);
+          } else {
+            seats[i] = s1.id; used.add(s1.id);
+            if (s2) { seats[j] = s2.id; used.add(s2.id); }
+          }
+        }
+        // 4c) 奇数列最后一列单座兜底
+        if (seatCols % 2 === 1 && queue.length) {
+          for (let r = 0; r < seatRows && queue.length; r++) {
+            const i = r * seatCols + seatCols - 1;
+            if (seats[i] === null) { const s = queue.shift(); seats[i] = s.id; used.add(s.id); }
+          }
+        }
+        // 5) 全量校验通过才采用
+        if (seatConstraints.every(c => seatConstraintOk(c, seats))) {
+          seatOrder = seats;
           renderSeatGrid();
           return;
         }
       }
-      // 约束冲突无法满足时，保留最后一版并提示
-      seatOrder = ids.slice().sort(() => Math.random() - 0.5).concat(pad());
+      // 真实冲突（如前排人数超过一排座位数、必须同桌但没有整对空位等）
+      const ids = students.map(s => s.id);
+      seatOrder = ids.slice().sort(() => Math.random() - 0.5).concat(Array(total - ids.length).fill(null));
       renderSeatGrid();
-      alert('约束条件有冲突，试了很多次无法全部满足。已生成一版随机座位，可删除部分约束后重试。');
+      alert('约束条件确实冲突（如前排座位不够、同桌组合互相打架），请检查约束后重试。已生成一版随机座位。');
     };
 
     window.exportSeats = function() {
@@ -2104,7 +2351,7 @@
     function persist() {
       try {
         saveActiveClass();
-        localStorage.setItem(LS_KEY, JSON.stringify({ classesData, activeClassId, todos, scheduleOriginal, scheduleCurrent, scheduleChanges, teacherName }));
+        localStorage.setItem(LS_KEY, JSON.stringify({ classesData, activeClassId, todos, scheduleCurrent, scheduleChanges, teacherName, periodTimes }));
       } catch(e) {}
     }
     function loadAll() {
@@ -2117,13 +2364,14 @@
         if (p.todos) todos = p.todos;
         if (p.teacherName) teacherName = p.teacherName;
         // 智能课表为全局共享；兼容旧版（per-class）数据：若顶层无课表，则从当前班迁移上来
-        if (p.scheduleOriginal) scheduleOriginal = p.scheduleOriginal;
         if (p.scheduleCurrent) scheduleCurrent = p.scheduleCurrent;
+        if (p.periodTimes) periodTimes = p.periodTimes;
         if (Array.isArray(p.scheduleChanges)) scheduleChanges = p.scheduleChanges;
         else if (classesData[activeClassId] && classesData[activeClassId].scheduleCurrent) {
           scheduleCurrent = classesData[activeClassId].scheduleCurrent;
-          if (classesData[activeClassId].scheduleOriginal) scheduleOriginal = classesData[activeClassId].scheduleOriginal;
         }
+        // 旧数据兼容：教室字段统一迁移为场地类型
+        weekdays.forEach(d => (scheduleCurrent[d] || []).forEach(item => normalizeRoomType(item)));
         // 旧数据兼容与默认值补齐
         Object.values(classesData).forEach(c => {
           if (!c.homeworks || c.homeworks.length === 0) migrateClassHomeworks(c);
@@ -2192,7 +2440,7 @@
     }
     function migrateClassHomeworks(c) {
       const defaultHwId = 'hw_1';
-      c.homeworks = [{ id: defaultHwId, subject: '语文', title: '课文背诵', deadline: '今天 08:00' }];
+      c.homeworks = [{ id: defaultHwId, subject: '语文', title: '课文背诵', deadline: getTodayStr() + 'T08:00', date: getTodayStr() }];
       c.currentHomeworkId = defaultHwId;
       c.students.forEach(s => {
         s.homeworkRecords = {
@@ -2473,58 +2721,209 @@
       setTimeout(() => { if (!sp.classList.contains('open')) sp.classList.add('hidden'); }, 280);
     };
 
-    // ===== 渲染星期标签 =====
+    // ===== 渲染星期标签（含本周日期与「今天」标记） =====
     function renderWeekdays() {
       const container = document.getElementById('weekdays');
+      const todayWd = todayWeekdayName();
       container.innerHTML = weekdays.map(d => `
-        <div class="flex-1 py-2 rounded-lg cursor-pointer ${d === activeWeekday ? 'bg-brand-50 text-brand-600' : 'text-gray-500'}" onclick="switchWeekday('${d}')">
-          <p class="text-xs">${d}</p>
+        <div class="flex-1 py-2 rounded-xl cursor-pointer transition-colors ${d === activeWeekday ? 'bg-brand-600 text-white shadow-md' : 'text-gray-500'}" onclick="switchWeekday('${d}')">
+          <p class="text-xs ${d === activeWeekday ? 'text-white/80' : ''}">${d}</p>
           <p class="text-sm font-bold">${weekdayDates[d]}</p>
+          <p class="text-[9px] leading-3 ${d === activeWeekday ? 'text-white/80' : 'text-brand-500'}">${d === todayWd ? '今天' : '&nbsp;'}</p>
         </div>
       `).join('');
     }
 
+    // ===== 下一节课卡片（按当前时间实时计算） =====
+    function renderNextCourse() {
+      const el = document.getElementById('next-course-card');
+      if (!el) return;
+      const todayWd = todayWeekdayName();
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      let next = null, state = null, minutes = 0;
+      if (todayWd) {
+        const list = (scheduleCurrent[todayWd] || []).slice().sort((a, b) => a.period - b.period);
+        for (const item of list) {
+          const tr = parseTimeRange(item.time);
+          if (!tr) continue;
+          if (nowMin < tr.end) {
+            next = item;
+            state = nowMin >= tr.start ? 'ongoing' : 'upcoming';
+            minutes = state === 'ongoing' ? tr.end - nowMin : tr.start - nowMin;
+            break;
+          }
+        }
+      }
+      if (!next) { el.innerHTML = ''; return; }
+      el.innerHTML = `
+        <div class="rounded-2xl p-4 mb-3 text-white shadow-md" style="background:linear-gradient(120deg,#4a7dff,#2e6bff)">
+          <div class="flex items-center">
+            <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl mr-3 shrink-0">⏰</div>
+            <div class="min-w-0">
+              <p class="text-[11px] text-white/75">${state === 'ongoing' ? '正在进行中' : '下一节课'}</p>
+              <p class="text-xl font-bold mt-0.5 truncate">${escAttr((next.time || '').split(/[-~—–]/)[0] || '')} ｜ ${escAttr(next.subject)}${next.cls ? ' · ' + escAttr(formatCls(next.cls) || next.cls) : ''}</p>
+              <p class="text-xs text-white/85 mt-1">${state === 'ongoing' ? '还有 ' + minutes + ' 分钟下课' : '距离上课还有 ' + minutes + ' 分钟'}</p>
+            </div>
+          </div>
+        </div>`;
+    }
+
     // ===== 渲染课表 =====
+    const SCHED_PALETTE = ['bg-blue-100 text-blue-600', 'bg-orange-100 text-orange-600', 'bg-green-100 text-green-600', 'bg-purple-100 text-purple-600', 'bg-cyan-100 text-cyan-600', 'bg-pink-100 text-pink-600'];
     function renderSchedule() {
       persist();
+      renderNextCourse();
       const container = document.getElementById('schedule-list');
-      const data = scheduleMode === 'original' ? scheduleOriginal[activeWeekday] : scheduleCurrent[activeWeekday];
-      const editable = scheduleMode === 'current';
+      const data = scheduleCurrent[activeWeekday];
+      // 始终按上课开始时间排序（改了时间的课自动排到正确位置）
+      data.sort((a, b) => {
+        const ta = parseTimeRange(a.time), tb = parseTimeRange(b.time);
+        return (ta ? ta.start : 99999) - (tb ? tb.start : 99999);
+      });
+      const editable = true;
+      const todayWd = todayWeekdayName();
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      // 每节课的状态（仅今天所在的星期有意义）：已结束 / 进行中 / 未开始
+      const statuses = data.map(item => {
+        if (activeWeekday !== todayWd) return null;
+        const tr = parseTimeRange(item.time);
+        if (!tr) return null;
+        if (nowMin >= tr.end) return 'done';
+        if (nowMin >= tr.start) return 'ongoing';
+        return 'todo';
+      });
+      const nextIdx = statuses.findIndex(s => s === 'todo' || s === 'ongoing');
+      if (!data.length) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-sm text-gray-400">这一天还没有课程</div>
+          <button class="w-full mt-3 py-3 text-sm border border-dashed ${editable ? 'border-brand-300 text-brand-600 bg-brand-50/50' : 'border-gray-200 text-gray-500'} rounded-2xl" onclick="${editable ? `addPeriod('${activeWeekday}')` : 'openScheduleAdd()'}">+ 添加节次</button>
+          ${editable ? `<button class="w-full mt-2 py-2 text-xs text-red-500 bg-red-50 rounded-xl" onclick="clearScheduleCurrent()">清空当前课表</button>` : ''}
+        `;
+        return;
+      }
       container.innerHTML = data.map((item, idx) => {
         const isChanged = !!item.note;
-        if (!editable) {
-          return `
-          <div class="flex items-center p-3 rounded-xl cursor-pointer hover:bg-gray-100 ${isChanged ? 'bg-red-50 border border-red-100' : 'bg-gray-50'}" onclick="openScheduleEdit(${idx})">
-            <div class="w-10 h-10 ${isChanged ? 'bg-red-500 text-white' : 'bg-white text-gray-500'} rounded-lg flex items-center justify-center text-sm font-bold mr-3">${item.period}</div>
-            <div class="flex-1">
-              <p class="font-semibold text-gray-800 text-sm">${item.subject} ${isChanged ? '<span class="text-xs text-red-500 ml-1 font-normal">(调)</span>' : ''}</p>
-              <p class="text-xs text-gray-500">${item.time} · ${item.room}</p>
-              ${isChanged ? `<p class="text-xs text-red-500 mt-0.5">${item.note}</p>` : ''}
-            </div>
-            <span class="text-xs text-gray-300 ml-2 shrink-0">编辑</span>
+        const st = statuses[idx];
+        const isNext = idx === nextIdx && (st === 'todo' || st === 'ongoing');
+        const statusLabel = st === 'done' ? '已结束' : st === 'ongoing' ? '进行中' : isNext ? '即将开始' : '';
+        const statusCls = st === 'done' ? 'text-gray-300' : 'text-orange-500';
+        const circleCls = st === 'done' ? 'bg-gray-200 text-gray-400' : (st === 'ongoing' || isNext) ? 'bg-orange-500 text-white' : item.mine ? 'bg-brand-600 text-white' : SCHED_PALETTE[idx % SCHED_PALETTE.length];
+        // 注意：滑出操作按钮藏在卡片内容层下面，卡片背景必须是不透明实色，否则会透出按钮
+        const cardCls = isChanged ? 'border-red-200' : (isNext || st === 'ongoing') ? 'border-orange-300' : item.mine ? 'border-brand-200' : 'border-gray-100';
+        const cardBg = isChanged ? 'bg-[#fef2f2]' : (isNext || st === 'ongoing') ? 'bg-[#fff7ed]' : item.mine ? 'bg-[#eef3ff]' : 'bg-white';
+        const badges = [
+          isNext ? '<span class="text-[11px] text-orange-600 bg-orange-100 rounded-md px-1.5 py-0.5 font-medium">🔥 即将开始</span>' : '',
+          item.cls ? `<span class="text-[11px] text-gray-500 bg-gray-100 rounded-md px-1.5 py-0.5 font-normal">${escAttr(formatCls(item.cls) || item.cls)}</span>` : '',
+          isChanged ? '<span class="text-[11px] text-red-500 bg-red-100 rounded-md px-1.5 py-0.5 font-medium">调</span>' : ''
+        ].filter(Boolean).join('');
+        const infoLine = [normalizeRoomType(item), item.cls ? escAttr(formatCls(item.cls) || item.cls) : ''].filter(Boolean).join(' ｜ ');
+        // 左滑露出的操作按钮（藏在卡片下面）
+        const swipeActions = `
+          <div class="absolute inset-y-0 right-0 flex items-stretch swipe-actions">
+            <button class="px-4 bg-orange-500 text-white text-xs font-medium" onclick="openSwapCourse(${idx})">调课</button>
+            <button class="px-4 bg-gray-500 text-white text-xs font-medium" onclick="openScheduleEdit(${idx})">编辑</button>
+            <button class="px-4 bg-red-500 text-white text-xs font-medium" onclick="removePeriod('${activeWeekday}', ${idx})">删除</button>
           </div>`;
-        }
         return `
-        <div class="flex items-center p-3 rounded-xl ${isChanged ? 'bg-red-50 border border-red-100' : 'bg-gray-50'}">
-          <div class="w-10 h-10 ${isChanged ? 'bg-red-500 text-white' : 'bg-white text-gray-500'} rounded-lg flex items-center justify-center text-sm font-bold mr-3">${item.period}</div>
-          <div class="flex-1 space-y-1">
-            <div class="flex items-center gap-1">
-              <input class="flex-1 text-sm font-semibold text-gray-800 bg-transparent border-b border-transparent focus:border-brand-400 outline-none" value="${item.subject}" onchange="updateScheduleField('${activeWeekday}', ${idx}, 'subject', this.value)">
-              ${isChanged ? '<span class="text-xs text-red-500 font-normal shrink-0">(调)</span>' : ''}
-              <button class="ml-1 text-gray-400 hover:text-red-500 text-lg leading-none shrink-0" onclick="removePeriod('${activeWeekday}', ${idx})" title="删除该节次">×</button>
+        <div class="flex mb-3">
+          <div class="flex flex-col items-center mr-3 shrink-0 w-9">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${circleCls}">${item.period}</div>
+            ${statusLabel ? `<p class="text-[9px] mt-1 ${statusCls}">${statusLabel}</p>` : ''}
+            ${idx < data.length - 1 ? '<div class="flex-1 w-px border-l border-dashed border-gray-200 mt-1.5"></div>' : ''}
+          </div>
+          <div class="flex-1 min-w-0 relative overflow-hidden rounded-2xl swipe-wrap">
+            ${swipeActions}
+            <div class="swipe-content relative rounded-2xl border shadow-sm p-4 ${cardCls} ${cardBg}" style="touch-action:pan-y" onclick="cardTapSchedule(${idx}, this)">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-xs text-gray-400 font-medium">${escAttr(item.time || '')}</p>
+                <div class="flex gap-1 shrink-0 flex-wrap justify-end items-center">
+                  ${badges}
+                  <button class="text-[11px] rounded-md px-1.5 py-0.5 font-medium ${item.mine ? 'text-white bg-brand-600' : 'text-gray-400 bg-gray-100'}" onclick="event.stopPropagation();toggleScheduleMine('${activeWeekday}', ${idx})">${item.mine ? '我的课' : '别人的课'}</button>
+                </div>
+              </div>
+              <p class="text-lg font-bold text-gray-900 mt-1">${escAttr(item.subject)}</p>
+              ${infoLine ? `<p class="text-xs text-gray-500 mt-1">📍 ${infoLine}</p>` : ''}
+              ${isChanged ? `<p class="text-xs text-red-500 mt-1">${escAttr(item.note)}</p>` : ''}
             </div>
-            <div class="flex items-center gap-1">
-              <input class="w-32 text-xs text-gray-500 bg-transparent border-b border-transparent focus:border-brand-400 outline-none" value="${item.time}" onchange="updateScheduleField('${activeWeekday}', ${idx}, 'time', this.value)" placeholder="时间">
-              <span class="text-xs text-gray-400">·</span>
-              <input class="flex-1 text-xs text-gray-500 bg-transparent border-b border-transparent focus:border-brand-400 outline-none" value="${item.room}" onchange="updateScheduleField('${activeWeekday}', ${idx}, 'room', this.value)" placeholder="教室">
-            </div>
-            <input class="w-full text-xs text-red-500 bg-transparent border-b border-red-200 focus:border-red-400 outline-none" value="${item.note || ''}" onchange="updateScheduleField('${activeWeekday}', ${idx}, 'note', this.value)" placeholder="填写调课说明（留空=非调课）">
           </div>
         </div>`;
       }).join('') + `
-        <button class="w-full mt-1 py-2 text-sm ${editable ? 'text-brand-600 bg-brand-50' : 'text-gray-500 bg-gray-100'} rounded-xl" onclick="${editable ? `addPeriod('${activeWeekday}')` : 'openScheduleAdd()'}">+ 添加节次</button>
+        <button class="w-full mt-1 py-3 text-sm border border-dashed ${editable ? 'border-brand-300 text-brand-600 bg-brand-50/50' : 'border-gray-300 text-gray-500 bg-white'} rounded-2xl" onclick="${editable ? `addPeriod('${activeWeekday}')` : 'openScheduleAdd()'}">＋ 添加节次</button>
+        ${editable ? `<button class="w-full mt-2 py-2 text-xs text-red-500 bg-red-50 rounded-xl" onclick="clearScheduleCurrent()">清空当前课表</button>` : ''}
       `;
+      container.querySelectorAll('.swipe-wrap').forEach(attachSwipe);
     }
+
+    // ===== 课程卡片：点按编辑 + 左滑露出 调课/编辑/删除 =====
+    let _openSwipeWrap = null;
+    window.cardTapSchedule = function(idx, el) {
+      const wrap = el.closest('.swipe-wrap');
+      if (wrap && wrap._moved) { wrap._moved = false; return; } // 刚滑完不触发点击
+      if (wrap && wrap._open) { // 已展开时点击 = 收起
+        wrap._open = false;
+        wrap.querySelector('.swipe-content').style.transition = 'transform .18s ease';
+        wrap.querySelector('.swipe-content').style.transform = 'translateX(0)';
+        _openSwipeWrap = null;
+        return;
+      }
+      openScheduleEdit(idx);
+    };
+    function attachSwipe(wrap) {
+      const content = wrap.querySelector('.swipe-content');
+      const actions = wrap.querySelector('.swipe-actions');
+      let startX = 0, startY = 0, baseX = 0, dragging = false, moved = false;
+      const width = () => actions.offsetWidth;
+      wrap.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        baseX = wrap._open ? -width() : 0;
+        dragging = true; moved = false;
+        content.style.transition = 'none';
+      }, { passive: true });
+      wrap.addEventListener('touchmove', e => {
+        if (!dragging) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        if (!moved && Math.abs(dy) > Math.abs(dx)) return; // 竖向滚动优先
+        moved = true;
+        wrap._moved = true;
+        let x = Math.max(-width(), Math.min(0, baseX + dx));
+        content.style.transform = 'translateX(' + x + 'px)';
+      }, { passive: true });
+      wrap.addEventListener('touchend', e => {
+        if (!dragging) return;
+        dragging = false;
+        content.style.transition = 'transform .18s ease';
+        if (!moved) return;
+        const dx = e.changedTouches[0].clientX - startX;
+        const open = (baseX + dx) < -width() / 3;
+        wrap._open = open;
+        content.style.transform = open ? 'translateX(' + (-width()) + 'px)' : 'translateX(0)';
+        if (open) {
+          if (_openSwipeWrap && _openSwipeWrap !== wrap) {
+            _openSwipeWrap._open = false;
+            _openSwipeWrap.querySelector('.swipe-content').style.transition = 'transform .18s ease';
+            _openSwipeWrap.querySelector('.swipe-content').style.transform = 'translateX(0)';
+          }
+          _openSwipeWrap = wrap;
+        } else if (_openSwipeWrap === wrap) _openSwipeWrap = null;
+        setTimeout(() => { wrap._moved = false; }, 250);
+      }, { passive: true });
+    }
+
+    // ===== 清空当前课表（二次确认） =====
+    window.clearScheduleCurrent = async function() {
+      if (!(await sheetConfirm({ title: '清空当前课表', message: '将删除「当前课表」周一到周五的全部节次，此操作不可恢复。确定清空？', okText: '确定清空', danger: true }))) return;
+      weekdays.forEach(d => { scheduleCurrent[d] = []; });
+      renderSchedule();
+    };
+
+    window.toggleScheduleMine = function(day, idx) {
+      const item = scheduleCurrent[day][idx];
+      item.mine = !item.mine;
+      renderSchedule();
+    };
 
     window.updateScheduleField = function(day, idx, field, value) {
       const item = scheduleCurrent[day][idx];
@@ -2539,12 +2938,11 @@
 
     // ===== 调课留痕：填写/修改调课说明时自动记录 =====
     function logScheduleChange(day, idx, item) {
-      const base = scheduleOriginal[day] && scheduleOriginal[day][idx];
       scheduleChanges.unshift({
         date: formatDateShort(getTodayStr()),
         weekday: day,
         period: item.period,
-        from: base ? base.subject : item.subject,
+        from: item.subject,
         to: item.subject,
         reason: (item.note || '').trim()
       });
@@ -2554,7 +2952,7 @@
     window.addPeriod = function(day) {
       const list = scheduleCurrent[day];
       const maxPeriod = list.reduce((m, p) => Math.max(m, p.period), 0);
-      list.push({ period: maxPeriod + 1, time: '00:00-00:00', subject: '新科目', room: '501' });
+      list.push({ period: maxPeriod + 1, time: periodTimes[maxPeriod + 1] || '', subject: '新科目', roomType: '教室', cls: '' });
       renderSchedule();
     };
 
@@ -2569,19 +2967,140 @@
       renderSchedule();
     };
 
+    // ===== 调课：选择目标星期+节次；目标有课则互换，空档则直接移过去 =====
+    let swapFromIdx = -1;
+
+    window.openSwapCourse = function(idx) {
+      swapFromIdx = idx;
+      const item = scheduleCurrent[activeWeekday][idx];
+      document.getElementById('swap-title').textContent = '调课：' + activeWeekday + ' 第' + item.period + '节「' + item.subject + '」';
+      document.getElementById('swap-weekday').innerHTML = weekdays.map(d => `<option value="${d}" ${d === activeWeekday ? 'selected' : ''}>${d}</option>`).join('');
+      renderSwapPeriods();
+      document.getElementById('swap-modal').classList.remove('hidden');
+    };
+
+    window.renderSwapPeriods = function() {
+      const day = document.getElementById('swap-weekday').value;
+      const list = scheduleCurrent[day] || [];
+      const maxP = Math.max(7, list.reduce((m, p) => Math.max(m, p.period), 0));
+      const opts = [];
+      for (let p = 1; p <= maxP; p++) {
+        const exist = list.find(x => x.period === p);
+        opts.push(`<option value="${p}">第${p}节 ${escAttr(periodTimes[p] || (exist ? exist.time : '') || '')}${exist ? '（' + escAttr(exist.subject) + '）' : '（空档）'}</option>`);
+      }
+      document.getElementById('swap-period').innerHTML = opts.join('');
+    };
+
+    window.closeSwapCourse = function() {
+      document.getElementById('swap-modal').classList.add('hidden');
+    };
+
+    // ===== 节次时间维护 =====
+    window.openPeriodTimes = function() {
+      const list = document.getElementById('period-times-list');
+      const maxP = Math.max(8, ...Object.keys(periodTimes).map(Number));
+      let html = '';
+      for (let p = 1; p <= maxP; p++) {
+        const tr = parseTimeRange(periodTimes[p]);
+        const sv = tr ? pad(Math.floor(tr.start / 60)) + ':' + pad(tr.start % 60) : '';
+        const ev = tr ? pad(Math.floor(tr.end / 60)) + ':' + pad(tr.end % 60) : '';
+        html += `
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm text-gray-600 w-14 shrink-0">第${p}节</span>
+            <input type="time" class="flex-1 min-w-0 px-2 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" id="pt-s-${p}" value="${sv}">
+            <span class="text-xs text-gray-400 shrink-0">至</span>
+            <input type="time" class="flex-1 min-w-0 px-2 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" id="pt-e-${p}" value="${ev}">
+          </div>`;
+      }
+      list.innerHTML = html;
+      document.getElementById('period-times-modal').classList.remove('hidden');
+    };
+
+    window.closePeriodTimes = function() {
+      document.getElementById('period-times-modal').classList.add('hidden');
+    };
+
+    window.savePeriodTimes = function() {
+      Object.keys(periodTimes).forEach(k => { delete periodTimes[k]; });
+      document.querySelectorAll('[id^="pt-s-"]').forEach(el => {
+        const p = parseInt(el.id.replace('pt-s-', ''), 10);
+        const sv = el.value;
+        const ev = (document.getElementById('pt-e-' + p) || {}).value;
+        if (sv && ev) periodTimes[p] = sv + '-' + ev;
+      });
+      // 所有课程的时间跟随节次时间更新（课程卡片上立即生效）
+      weekdays.forEach(d => (scheduleCurrent[d] || []).forEach(item => {
+        if (periodTimes[item.period]) item.time = periodTimes[item.period];
+      }));
+      persist();
+      closePeriodTimes();
+      renderSchedule();
+    };
+
+    window.confirmSwapCourse = async function() {
+      const toDay = document.getElementById('swap-weekday').value;
+      const toPeriod = parseInt(document.getElementById('swap-period').value, 10);
+      const fromList = scheduleCurrent[activeWeekday];
+      const toList = scheduleCurrent[toDay];
+      const from = fromList[swapFromIdx];
+      const to = toList.find(x => x.period === toPeriod);
+      if (!from) { closeSwapCourse(); return; }
+      if (toDay === activeWeekday && from.period === toPeriod) { closeSwapCourse(); return; }
+      const fields = ['subject', 'cls', 'roomType', 'mine', 'note', 'changed'];
+      if (to) {
+        if (!(await sheetConfirm({ title: '确认调课', message: `把「${activeWeekday} 第${from.period}节 ${from.subject}」和「${toDay} 第${to.period}节 ${to.subject}」互换？`, okText: '确认互换' }))) return;
+        fields.forEach(f => { const tmp = from[f]; from[f] = to[f]; to[f] = tmp; });
+        scheduleChanges.unshift({ date: formatDateShort(getTodayStr()), weekday: activeWeekday, period: from.period, from: from.subject, to: to.subject, reason: `与 ${toDay} 第${to.period}节互换` });
+      } else {
+        if (!(await sheetConfirm({ title: '确认调课', message: `把「${activeWeekday} 第${from.period}节 ${from.subject}」调到「${toDay} 第${toPeriod}节」（当前是空档）？`, okText: '确认调课' }))) return;
+        const moved = {};
+        fields.forEach(f => { moved[f] = from[f]; });
+        toList.push({ period: toPeriod, time: periodTimes[toPeriod] || '', ...moved });
+        toList.sort((a, b) => a.period - b.period);
+        fromList.splice(swapFromIdx, 1);
+        scheduleChanges.unshift({ date: formatDateShort(getTodayStr()), weekday: activeWeekday, period: from.period, from: from.subject, to: '空档', reason: `调到 ${toDay} 第${toPeriod}节` });
+      }
+      closeSwapCourse();
+      renderSchedule();
+      renderScheduleChanges();
+    };
+
+    // 课表页开着时每分钟刷新一次「下一节课」卡片
+    setInterval(() => {
+      const schedulePage = document.getElementById('page-schedule');
+      if (schedulePage && schedulePage.classList.contains('active')) renderNextCourse();
+    }, 60000);
+
     // ===== 课表编辑弹窗（原始/当前均可点击进入）=====
     let scheduleEditMode = 'edit';
     let scheduleEditIdx = -1;
+    // 弹窗操作的目标数据：当前课表 Tab 下编辑当前课表，原始课表 Tab 下编辑原始课表
+    function scheduleEditList() {
+      return scheduleCurrent[activeWeekday];
+    }
+
+    // 编辑弹窗的节次选项：1 ~ 当前最大节次+1
+    function renderEditPeriodOptions(selected) {
+      const maxP = Math.max(8, ...weekdays.map(d => (scheduleCurrent[d] || []).reduce((m, p) => Math.max(m, p.period), 0)));
+      let html = '';
+      for (let p = 1; p <= maxP; p++) html += `<option value="${p}" ${p === selected ? 'selected' : ''}>第${p}节</option>`;
+      document.getElementById('se-period').innerHTML = html;
+    }
 
     window.openScheduleEdit = function(idx) {
       scheduleEditMode = 'edit';
       scheduleEditIdx = idx;
-      const item = scheduleOriginal[activeWeekday][idx];
+      const item = scheduleEditList()[idx];
       document.getElementById('schedule-edit-title').textContent = activeWeekday + ' 第' + item.period + '节';
       document.getElementById('se-subject').value = item.subject;
-      document.getElementById('se-time').value = item.time;
-      document.getElementById('se-room').value = item.room;
+      renderEditPeriodOptions(item.period);
+      const tr = parseTimeRange(item.time);
+      document.getElementById('se-time-start').value = tr ? pad(Math.floor(tr.start / 60)) + ':' + pad(tr.start % 60) : '';
+      document.getElementById('se-time-end').value = tr ? pad(Math.floor(tr.end / 60)) + ':' + pad(tr.end % 60) : '';
+      document.getElementById('se-roomtype').innerHTML = ROOM_TYPES.map(t => `<option value="${t}" ${t === normalizeRoomType(item) ? 'selected' : ''}>${t}</option>`).join('');
+      document.getElementById('se-cls').value = item.cls || '';
       document.getElementById('se-note').value = item.note || '';
+      document.getElementById('se-mine').checked = !!item.mine;
       document.getElementById('se-delete').classList.remove('hidden');
       document.getElementById('schedule-edit-modal').classList.remove('hidden');
     };
@@ -2591,9 +3110,15 @@
       scheduleEditIdx = -1;
       document.getElementById('schedule-edit-title').textContent = activeWeekday + ' 新增节次';
       document.getElementById('se-subject').value = '';
-      document.getElementById('se-time').value = '';
-      document.getElementById('se-room').value = '';
+      const nextPeriod = (scheduleCurrent[activeWeekday] || []).reduce((m, p) => Math.max(m, p.period), 0) + 1;
+      renderEditPeriodOptions(nextPeriod);
+      const newTr = parseTimeRange(periodTimes[nextPeriod]);
+      document.getElementById('se-time-start').value = newTr ? pad(Math.floor(newTr.start / 60)) + ':' + pad(newTr.start % 60) : '';
+      document.getElementById('se-time-end').value = newTr ? pad(Math.floor(newTr.end / 60)) + ':' + pad(newTr.end % 60) : '';
+      document.getElementById('se-roomtype').innerHTML = ROOM_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+      document.getElementById('se-cls').value = '';
       document.getElementById('se-note').value = '';
+      document.getElementById('se-mine').checked = true;
       document.getElementById('se-delete').classList.add('hidden');
       document.getElementById('schedule-edit-modal').classList.remove('hidden');
     };
@@ -2604,22 +3129,26 @@
 
     window.saveScheduleEdit = function() {
       const subject = document.getElementById('se-subject').value.trim() || '未命名';
-      const time = document.getElementById('se-time').value.trim();
-      const room = document.getElementById('se-room').value.trim();
+      const ts = document.getElementById('se-time-start').value;
+      const te = document.getElementById('se-time-end').value;
+      const time = ts && te ? ts + '-' + te : '';
+      const roomType = document.getElementById('se-roomtype').value;
+      const cls = document.getElementById('se-cls').value.trim();
       const note = document.getElementById('se-note').value.trim();
+      const mine = document.getElementById('se-mine').checked;
+      const period = parseInt(document.getElementById('se-period').value, 10);
       if (scheduleEditMode === 'add') {
-        const list = scheduleOriginal[activeWeekday];
-        const maxPeriod = list.reduce((m, p) => Math.max(m, p.period), 0);
-        const newItem = { period: maxPeriod + 1, time: time, subject: subject, room: room, note: note };
+        const list = scheduleEditList();
+        const newItem = { period: period, time: time || periodTimes[period] || '', subject: subject, roomType: roomType, cls: cls, note: note, mine: mine };
         list.push(newItem);
         if (note) {
           scheduleChanges.unshift({ date: formatDateShort(getTodayStr()), weekday: activeWeekday, period: newItem.period, from: '—', to: subject, reason: note });
         }
       } else {
-        const item = scheduleOriginal[activeWeekday][scheduleEditIdx];
+        const item = scheduleEditList()[scheduleEditIdx];
         const prevSubject = item.subject;
         const prevNote = item.note || '';
-        item.subject = subject; item.time = time; item.room = room; item.note = note; item.changed = !!note;
+        item.subject = subject; item.period = period; item.time = time; item.roomType = roomType; item.cls = cls; item.note = note; item.mine = mine; item.changed = !!note;
         if (note && note !== prevNote) {
           scheduleChanges.unshift({ date: formatDateShort(getTodayStr()), weekday: activeWeekday, period: item.period, from: prevSubject, to: subject, reason: note });
         }
@@ -2631,25 +3160,470 @@
 
     window.deleteScheduleEdit = function() {
       if (scheduleEditMode === 'edit' && scheduleEditIdx >= 0) {
-        scheduleOriginal[activeWeekday].splice(scheduleEditIdx, 1);
+        scheduleEditList().splice(scheduleEditIdx, 1);
       }
       closeScheduleEdit();
       renderSchedule();
     };
 
-    document.getElementById('schedule-original').addEventListener('click', function() {
-      scheduleMode = 'original';
-      this.className = 'flex-1 py-2 text-sm font-medium rounded-lg bg-white text-brand-600 shadow-sm';
-      document.getElementById('schedule-current').className = 'flex-1 py-2 text-sm font-medium rounded-lg text-gray-600';
-      renderSchedule();
-    });
+    // ===== 课表 OCR 识别（ML Kit 中文识别，模型内置于 App，完全离线；浏览器预览不支持） =====
+    let ocrResults = []; // { weekday, period, subject, cls, mine }
+    let ocrDebugData = null; // 各角度的原始识别行 + 解析结果，用于导出排查
 
-    document.getElementById('schedule-current').addEventListener('click', function() {
-      scheduleMode = 'current';
-      this.className = 'flex-1 py-2 text-sm font-medium rounded-lg bg-white text-brand-600 shadow-sm';
-      document.getElementById('schedule-original').className = 'flex-1 py-2 text-sm font-medium rounded-lg text-gray-600';
+    window.ocrPickImage = function() {
+      document.getElementById('ocr-file').click();
+    };
+
+    window.closeOcrModal = function() {
+      document.getElementById('ocr-modal').classList.add('hidden');
+    };
+
+    // 导出识别调试信息（原始识别行 + 各角度解析结果），便于排查识别问题
+    window.exportOcrDebug = function() {
+      if (!ocrDebugData) return;
+      exportFile('课表识别调试_' + getTodayStr() + '.json', JSON.stringify(ocrDebugData, null, 2));
+    };
+
+    function ocrSetStatus(text) {
+      const st = document.getElementById('ocr-status');
+      st.classList.remove('hidden');
+      st.textContent = text;
+      document.getElementById('ocr-review').classList.add('hidden');
+    }
+
+    function loadImageFromFile(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    function rotateImageToCanvas(img, deg) {
+      // 先降采样（手机原图太大，OCR 会很慢甚至内存不足），再按需旋转
+      const MAX = 1600;
+      const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+      const canvas = document.createElement('canvas');
+      const swap = deg === 90 || deg === 270;
+      canvas.width = swap ? h : w;
+      canvas.height = swap ? w : h;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(deg * Math.PI / 180);
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+      return canvas;
+    }
+
+    const CN_NUM = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
+    function cnToNum(s) {
+      if (/^\d+$/.test(s)) return parseInt(s, 10);
+      if (s === '十') return 10;
+      const m = s.match(/^十([一二三四五六七八九])$/);
+      if (m) return 10 + CN_NUM[m[1]];
+      return CN_NUM[s] || 0;
+    }
+
+    // OCR 文本清洗：去边框符号、去空格、繁体转简体
+    const T2S_MAP = { '課': '课', '務': '务', '語': '语', '數': '数', '學': '学', '體': '体', '樂': '乐', '會': '会', '後': '后', '門': '门', '間': '间', '題': '题', '點': '点', '鐘': '钟', '讀': '读', '寫': '写', '聽': '听', '說': '说', '話': '话', '認': '认', '識': '识', '書': '书', '畫': '画', '節': '节', '週': '周', '師': '师', '記': '记', '錄': '录', '試': '试', '驗': '验', '場': '场', '園': '园', '長': '长', '兒': '儿', '車': '车', '馬': '马', '龍': '龙', '貝': '贝', '見': '见', '頁': '页', '電': '电', '腦': '脑', '與': '与', '為': '为', '這': '这', '個': '个' };
+    function cleanOcrText(s) {
+      return (s || '')
+        .replace(/\s+/g, '')
+        .replace(/[丨|｜¦‖]/g, '')
+        .replace(/[課務語數學體樂會後門間題點鐘讀寫聽說話認識書畫節週師記錄試驗場園長兒車馬龍貝見頁電腦與為這個]/g, ch => T2S_MAP[ch] || ch);
+    }
+
+    // 班级代码规范化：一3 / 六6 → 一年级（3）班 / 六年级（6）班
+    function formatCls(cls) {
+      const m = (cls || '').trim().match(/^([一二三四五六])(\d)$/);
+      return m ? m[1] + '年级（' + m[2] + '）班' : (cls || '');
+    }
+
+    // 常见课程名纠错：编辑距离 ≤1 时自动纠正（如 校本谋程→校本课程、课后服脈务→课后服务）
+    const KNOWN_COURSES = ['校本课程', '课后服务', '人工智能', '道德与法治', '综合实践', '信息技术', '心理健康', '语文', '数学', '英语', '科学', '体育', '音乐', '美术', '班会', '劳动', '写字', '阅读'];
+    function editDistance(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+      for (let j = 1; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        }
+      }
+      return dp[m][n];
+    }
+    function correctCourseName(s) {
+      if (!s) return s;
+      // 拆出括号部分，括号内外分别纠正后再拼回（如 校本谋程（人工知能）→校本课程（人工智能））
+      const parts = [];
+      const core = s.replace(/[（(]([^)）]*)[)）]?/g, (mm, inner) => { parts.push(inner); return ''; }).trim();
+      const fixedCore = correctCourseNameCore(core);
+      const fixedParts = parts.map(p => correctCourseNameCore(p)).filter(Boolean);
+      if (!fixedCore) return fixedParts.join('');
+      return fixedCore + fixedParts.map(p => '（' + p + '）').join('');
+    }
+    function correctCourseNameCore(s) {
+      if (!s) return s;
+      if (KNOWN_COURSES.indexOf(s) !== -1) return s;
+      // 关键词包含优先收敛（校本谋程→校本课程、谋启服脹务/课后服般务→课后服务）
+      if (/校本/.test(s) && editDistance(s, '校本课程') <= 3) return '校本课程';
+      if (/服务/.test(s) && editDistance(s, '课后服务') <= 4) return '课后服务';
+      let best = null, bestD = 99;
+      for (const c of KNOWN_COURSES) {
+        if (Math.abs(c.length - s.length) > 1) continue;
+        const d = editDistance(s, c);
+        const limit = c.length >= 4 ? 1 : 0;
+        if (d <= limit && d < bestD) { best = c; bestD = d; }
+      }
+      return best || s;
+    }
+
+    // 把 OCR 输出的中文单字碎片按视觉行合并成完整词（如 星+期+一 → 星期一）
+    function mergeWordFragments(rawWords) {
+      const ws = (rawWords || []).map(w => ({
+        text: (w.text || ''),
+        x0: w.bbox.x0, y0: w.bbox.y0, x1: w.bbox.x1, y1: w.bbox.y1,
+        cx: (w.bbox.x0 + w.bbox.x1) / 2,
+        cy: (w.bbox.y0 + w.bbox.y1) / 2,
+        h: w.bbox.y1 - w.bbox.y0
+      })).filter(w => w.text.trim());
+      if (!ws.length) return [];
+      const hs = ws.map(w => w.h).sort((a, b) => a - b);
+      const medH = hs[Math.floor(hs.length / 2)] || 20;
+      // 按 y 聚成行
+      ws.sort((a, b) => a.cy - b.cy);
+      const lines = [];
+      ws.forEach(w => {
+        const line = lines.find(l => Math.abs(l.cy - w.cy) < medH * 0.7);
+        if (line) { line.items.push(w); line.cy = (line.cy * (line.items.length - 1) + w.cy) / line.items.length; }
+        else lines.push({ cy: w.cy, items: [w] });
+      });
+      // 行内按 x 排序，间距小的碎片合并
+      const merged = [];
+      lines.forEach(l => {
+        l.items.sort((a, b) => a.x0 - b.x0);
+        let cur = null;
+        l.items.forEach(w => {
+          if (cur && w.x0 - cur.x1 < medH * 1.2) {
+            cur.text += w.text;
+            cur.x1 = w.x1;
+            cur.y0 = Math.min(cur.y0, w.y0);
+            cur.y1 = Math.max(cur.y1, w.y1);
+          } else {
+            if (cur) merged.push(cur);
+            cur = { text: w.text, x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1 };
+          }
+        });
+        if (cur) merged.push(cur);
+      });
+      return merged.map(m => ({ text: m.text, bbox: { x0: m.x0, y0: m.y0, x1: m.x1, y1: m.y1 } }));
+    }
+
+    // 由「星期|节次」格子文本生成课程条目（提取班级代码、过滤噪声）
+    function buildTimetableEntries(cellTexts) {
+      const entries = [];
+      Object.keys(cellTexts).forEach(k => {
+        const parts = k.split('|');
+        const period = parseInt(parts[1], 10);
+        // 同一格内按 上→下、左→右 拼接
+        const text = cellTexts[k].sort((a, b) => (a.cy - b.cy) || (a.cx - b.cx)).map(w => w.text).join('');
+        if (!text) return;
+        // 提取班级代码（如 （五3）（一3））
+        const rooms = [];
+        const subject = text.replace(/[（(]([一二三四五六]\d)[)）]/g, (m, code) => { rooms.push(code); return ''; }).trim();
+        // 课程名必须含中文，防止边框线等噪声变成课程
+        if (!subject || !/[一-龥]/.test(subject)) return;
+        entries.push({ weekday: parts[0], period, subject: correctCourseName(subject), cls: rooms.map(c => formatCls(c)).filter(Boolean).join(' '), mine: true });
+      });
+      // 一个格子只可能是一门课：同一格识别出多个班级代码，说明相邻格的内容被并进来了，
+      // 把多出来的班级代码还给同节次缺班级的条目
+      const byPeriod = {};
+      entries.forEach(e => { (byPeriod[e.period] = byPeriod[e.period] || []).push(e); });
+      Object.values(byPeriod).forEach(list => {
+        list.forEach(e => {
+          const codes = (e.cls || '').split(' ').filter(Boolean);
+          if (codes.length < 2) return;
+          e.cls = codes[0];
+          codes.slice(1).forEach(code => {
+            const target = list.find(x => x !== e && !x.cls);
+            if (target) target.cls = code;
+          });
+        });
+      });
+      const wdMap = { '周一': 1, '周二': 2, '周三': 3, '周四': 4, '周五': 5 };
+      entries.sort((a, b) => (wdMap[a.weekday] - wdMap[b.weekday]) || (a.period - b.period));
+      return entries;
+    }
+
+    // 用「星期几」锚点定列、内容行聚类定行，重建表格单元格；
+    // 同时兼容横版课表（行=星期，列=节次）
+    function parseTimetableWords(rawWords) {
+      // OCR 常把中文拆成单字碎片，先把同一视觉行内相邻的碎片合并成词
+      const words = mergeWordFragments(rawWords);
+      const wdOrder = ['周一', '周二', '周三', '周四', '周五'];
+      const wdAnchors = []; // { wd, cx, cy }
+      const pdAnchors = []; // { period, cy }
+      const rest = [];
+      words.forEach(w => {
+        // 清洗：去空白、全角转半角、角括号转圆括号、去边框符号、繁转简
+        const text = cleanOcrText(
+          (w.text || '')
+            .replace(/[０-９Ａ-Ｚａ-ｚ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+            .replace(/[《〈【]/g, '（').replace(/[》〉】]/g, '）')
+        );
+        if (!text) return;
+        // 去掉表格边框识别成的纯符号词（| 丨 ─ 等）
+        if (!/[一-龥0-9A-Za-z]/.test(text)) return;
+        const cx = (w.bbox.x0 + w.bbox.x1) / 2;
+        const cy = (w.bbox.y0 + w.bbox.y1) / 2;
+        const wdM = text.match(/星期([一二三四五])/) || text.match(/[星呈]期([一二三四五])/) || text.match(/期([一二三四五])$/);
+        if (wdM) { wdAnchors.push({ wd: '周' + wdM[1], cx, cy }); return; }
+        const pdM = text.match(/第([0-9一二三四五六七八九]{1,2})节/) || text.match(/[第笛]([0-9一二三四五六七八九]{1,2})节/);
+        if (pdM) { const p = cnToNum(pdM[1]); if (p) { pdAnchors.push({ period: p, cx, cy }); return; } }
+        rest.push({ text, cx, cy, h: w.bbox.y1 - w.bbox.y0 });
+      });
+      const anchorCount = wdAnchors.length + pdAnchors.length;
+      // 至少 2 个星期锚点即可线性拟合
+      if (wdAnchors.length < 2) return { entries: [], anchorCount, wdCount: wdAnchors.length, pdCount: pdAnchors.length };
+
+      // 同一星期/节次可能被识别成多个词，按坐标聚类取均值
+      const cluster = (anchors, key) => {
+        const map = {};
+        anchors.forEach(a => { (map[a[key]] = map[a[key]] || []).push(a); });
+        return Object.keys(map).map(k => {
+          const g = map[k];
+          return { key: k, cx: g.reduce((s, a) => s + a.cx, 0) / g.length, cy: g.reduce((s, a) => s + a.cy, 0) / g.length };
+        });
+      };
+      // 最小二乘直线拟合 value = base + pitch * index
+      const fitLine = (idxArr, valArr) => {
+        const n = idxArr.length;
+        const mi = idxArr.reduce((s, v) => s + v, 0) / n, mv = valArr.reduce((s, v) => s + v, 0) / n;
+        let num = 0, den = 0;
+        for (let i = 0; i < n; i++) { num += (idxArr[i] - mi) * (valArr[i] - mv); den += (idxArr[i] - mi) * (idxArr[i] - mi); }
+        const pitch = den ? num / den : 0;
+        return { base: mv - pitch * mi, pitch };
+      };
+
+      // ---- 横版课表：星期锚点纵向排列（行=星期，列=节次） ----
+      const wdCxs = wdAnchors.map(a => a.cx), wdCys = wdAnchors.map(a => a.cy);
+      const wdSpreadX = Math.max.apply(null, wdCxs) - Math.min.apply(null, wdCxs);
+      const wdSpreadY = Math.max.apply(null, wdCys) - Math.min.apply(null, wdCys);
+      if (wdSpreadY > wdSpreadX) {
+        if (pdAnchors.length < 2) return { entries: [], anchorCount, wdCount: wdAnchors.length, pdCount: pdAnchors.length };
+        // 星期行：cy = base + pitch * 周序
+        const wdKnown = cluster(wdAnchors, 'wd');
+        const wf = fitLine(wdKnown.map(c => wdOrder.indexOf(c.key)), wdKnown.map(c => c.cy));
+        const wdRows = wdOrder.map((wd, idx) => ({ key: wd, cy: wf.base + wf.pitch * idx }));
+        const rowGap = Math.abs(wf.pitch) || 9999;
+        // 节次列：cx = base + pitch * 节次
+        const pdKnown = cluster(pdAnchors, 'period');
+        const pf = fitLine(pdKnown.map(c => parseInt(c.key, 10)), pdKnown.map(c => c.cx));
+        const pMin = Math.min.apply(null, pdKnown.map(c => parseInt(c.key, 10)));
+        const pMax = Math.min(12, Math.max.apply(null, pdKnown.map(c => parseInt(c.key, 10))));
+        const pdCols = [];
+        for (let p = pMin; p <= pMax; p++) pdCols.push({ key: String(p), cx: pf.base + pf.pitch * p });
+        const colGap = Math.abs(pf.pitch) || 9999;
+        // 格子分配：行带里星期标签偏上、内容偏下，用 cy - 0.35*行距 再找最近标签来抵消
+        const content = rest.filter(w => !/^(课程|时间|星期|上午|下午|中午|节次)/.test(w.text) && !/^[上下午]$/.test(w.text));
+        const cellTexts = {};
+        content.forEach(w => {
+          const wy = w.cy - rowGap * 0.35;
+          let ri = -1, rd = Infinity;
+          wdRows.forEach((r, i) => { const d = Math.abs(wy - r.cy); if (d < rd) { rd = d; ri = i; } });
+          if (ri === -1 || rd > rowGap * 0.55) return;
+          let ci = -1, cd = Infinity;
+          pdCols.forEach((c, i) => { const d = Math.abs(w.cx - c.cx); if (d < cd) { cd = d; ci = i; } });
+          if (ci === -1 || cd > colGap * 0.55) return;
+          const k = wdRows[ri].key + '|' + pdCols[ci].key;
+          (cellTexts[k] = cellTexts[k] || []).push(w);
+        });
+        return { entries: buildTimetableEntries(cellTexts), anchorCount, wdCount: wdAnchors.length, pdCount: pdAnchors.length };
+      }
+
+      // ---- 竖版课表：列=星期，行=节次 ----
+      const colsKnown = cluster(wdAnchors, 'wd');
+      const cf = fitLine(colsKnown.map(c => wdOrder.indexOf(c.key)), colsKnown.map(c => c.cx));
+      const cols = wdOrder.map((wd, idx) => ({ key: wd, cx: cf.base + cf.pitch * idx }));
+      const colGap = Math.abs(cf.pitch) || 9999;
+      const headerCy = wdAnchors.reduce((s, a) => s + a.cy, 0) / wdAnchors.length;
+
+      // ---- 行：内容词按 cy 聚成表格行（同格的多行文字行距小，表格行间行距大） ----
+      const content = rest.filter(w => !/^(课程|时间|星期|上午|下午|中午|节次)/.test(w.text));
+      if (!content.length) return { entries: [], anchorCount, wdCount: wdAnchors.length, pdCount: pdAnchors.length };
+      const medH = (() => { const hs = content.map(w => w.h).sort((a, b) => a - b); return hs[Math.floor(hs.length / 2)] || 20; })();
+      content.sort((a, b) => a.cy - b.cy);
+      const rowClusters = [];
+      content.forEach(w => {
+        const last = rowClusters[rowClusters.length - 1];
+        if (last && w.cy - last.cy < medH * 1.8) {
+          last.items.push(w);
+          last.cy = (last.cy * (last.items.length - 1) + w.cy) / last.items.length;
+        } else {
+          rowClusters.push({ cy: w.cy, items: [w] });
+        }
+      });
+      // 表格行距 = 相邻行簇间距的中位数
+      const rowGaps = [];
+      for (let i = 0; i + 1 < rowClusters.length; i++) rowGaps.push(rowClusters[i + 1].cy - rowClusters[i].cy);
+      rowGaps.sort((a, b) => a - b);
+      const rowPitch = rowGaps.length ? rowGaps[Math.floor(rowGaps.length / 2)] : medH * 3;
+      // 节次校准：有「第N节」锚点则最小二乘拟合 cy = base + pitch * period
+      let rowBase, rowPitchFit = rowPitch;
+      if (pdAnchors.length) {
+        const pm = pdAnchors.reduce((s, a) => s + a.period, 0) / pdAnchors.length;
+        const cm = pdAnchors.reduce((s, a) => s + a.cy, 0) / pdAnchors.length;
+        let pn = 0, pd2 = 0;
+        pdAnchors.forEach(a => { pn += (a.period - pm) * (a.cy - cm); pd2 += (a.period - pm) * (a.period - pm); });
+        if (pd2) rowPitchFit = pn / pd2;
+        rowBase = cm - rowPitchFit * pm;
+        // 校准结果不合理（透视严重时偶发）则退回表头推算
+        if (!(rowPitchFit > medH * 0.8 && rowPitchFit < medH * 6)) {
+          rowPitchFit = rowPitch;
+          rowBase = headerCy;
+        }
+      } else {
+        // 没有节次锚点：表头行视为第 0 节
+        rowBase = headerCy;
+      }
+      // 给每行簇算节次（<1 的为表头/标题区，丢弃）
+      const dataRows = rowClusters.map(rc => ({
+        cy: rc.cy,
+        items: rc.items,
+        period: Math.round((rc.cy - rowBase) / rowPitchFit)
+      })).filter(r => r.period >= 1 && r.period <= 12);
+
+      // ---- 格子分配 ----
+      const cellTexts = {}; // 'wd|period' -> [text]
+      dataRows.forEach(r => {
+        r.items.forEach(w => {
+          let bi = -1, bd = Infinity;
+          cols.forEach((c, i) => { const d = Math.abs(w.cx - c.cx); if (d < bd) { bd = d; bi = i; } });
+          if (bi === -1 || bd > colGap * 0.55) return;
+          const k = cols[bi].key + '|' + r.period;
+          (cellTexts[k] = cellTexts[k] || []).push(w);
+        });
+      });
+      const entries = buildTimetableEntries(cellTexts);
+      return { entries, anchorCount, wdCount: wdAnchors.length, pdCount: pdAnchors.length };
+    }
+
+    window.ocrFileChosen = async function(input) {
+      const file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      document.getElementById('ocr-modal').classList.remove('hidden');
+      const nativeOcr = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+        ? window.Capacitor.Plugins.TimetableOcr : null;
+      if (!nativeOcr) {
+        ocrSetStatus('课表识别需要在安卓 App 中使用（浏览器预览不支持）。');
+        return;
+      }
+      try {
+        const img = await loadImageFromFile(file);
+        ocrSetStatus('正在初始化识别引擎…');
+        // 依次尝试四个方向，选课程识别最多的
+        const angles = [0, 90, 270, 180];
+        const diag = [];
+        const debugAngles = [];
+        let best = null;
+        for (const a of angles) {
+          ocrSetStatus('正在识别图片文字…（尝试方向 ' + a + '°）');
+          const canvas = rotateImageToCanvas(img, a);
+          const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+          const res = await nativeOcr.recognize({ base64 });
+          const toWords = arr => (arr || []).map(l => ({ text: l.text, bbox: { x0: l.x0, y0: l.y0, x1: l.x1, y1: l.y1 } }));
+          const elemWords = toWords(res.elements);
+          const lineWords = toWords(res.lines);
+          // 元素级（词）与行级各解析一次，取更优的
+          const scoreOf = p => p.entries.filter(e => e.cls).length * 20 + p.entries.length * 5 + p.anchorCount;
+          const pElem = parseTimetableWords(elemWords);
+          const pLine = parseTimetableWords(lineWords);
+          const parsed = scoreOf(pElem) >= scoreOf(pLine) ? pElem : pLine;
+          const words = parsed === pElem ? elemWords : lineWords;
+          diag.push(a + '°:词' + words.length + '/锚' + parsed.anchorCount + '(列' + (parsed.wdCount || 0) + '+节' + (parsed.pdCount || 0) + ')/课' + parsed.entries.length);
+          debugAngles.push({
+            angle: a,
+            anchors: parsed.anchorCount, wd: parsed.wdCount, pd: parsed.pdCount,
+            entries: parsed.entries,
+            lines: words.map(w => ({ t: w.text, x: Math.round(w.bbox.x0), y: Math.round(w.bbox.y0), x2: Math.round(w.bbox.x1), y2: Math.round(w.bbox.y1) }))
+          });
+          // 有班级代码的条目更可信，避免错方向靠噪声条目刷分
+          const score = parsed.entries.filter(e => e.cls).length * 20 + parsed.entries.length * 5 + parsed.anchorCount;
+          if (!best || score > best.score) best = { score, entries: parsed.entries, angle: a };
+          if (parsed.entries.length >= 10) break; // 识别效果足够好就停止尝试
+        }
+        ocrDebugData = { time: new Date().toISOString(), diag, angles: debugAngles };
+        document.getElementById('ocr-debug-btn').classList.remove('hidden');
+        if (!best || !best.entries.length) {
+          ocrSetStatus('没有识别到课程内容。请尽量正对表格、保证光线充足、画面清晰后重新拍摄。\n（诊断 ' + diag.join('；') + '）\n也可以点下方按钮把识别数据发给我排查。');
+          return;
+        }
+        ocrResults = best.entries;
+        renderOcrReview();
+      } catch (e) {
+        ocrSetStatus('识别失败：' + (e && e.message ? e.message : '未知错误'));
+      }
+    };
+
+    function renderOcrReview() {
+      document.getElementById('ocr-status').classList.add('hidden');
+      document.getElementById('ocr-review').classList.remove('hidden');
+      const wdOpts = sel => ['周一', '周二', '周三', '周四', '周五'].map(d => `<option value="${d}" ${d === sel ? 'selected' : ''}>${d}</option>`).join('');
+      document.getElementById('ocr-review-list').innerHTML = ocrResults.map((e, i) => `
+        <div class="bg-gray-50 rounded-xl p-2.5">
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <select class="text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" onchange="ocrUpdate(${i}, 'weekday', this.value)">${wdOpts(e.weekday)}</select>
+            <span class="text-xs text-gray-400">第</span>
+            <input type="number" min="1" max="12" class="w-12 text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" value="${e.period}" onchange="ocrUpdate(${i}, 'period', this.value)">
+            <span class="text-xs text-gray-400">节</span>
+            <label class="ml-auto flex items-center gap-1 text-xs text-gray-600">
+              <input type="checkbox" class="w-3.5 h-3.5 accent-brand-600" ${e.mine ? 'checked' : ''} onchange="ocrUpdate(${i}, 'mine', this.checked)">我的课
+            </label>
+            <button class="text-gray-400 text-base leading-none px-1" onclick="ocrRemove(${i})">×</button>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input class="flex-1 text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" value="${escAttr(e.subject)}" placeholder="课程名称" onchange="ocrUpdate(${i}, 'subject', this.value)">
+            <input class="w-20 text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1 text-gray-700" value="${escAttr(e.cls || '')}" placeholder="班级" onchange="ocrUpdate(${i}, 'cls', this.value)">
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.ocrUpdate = function(i, field, value) {
+      if (!ocrResults[i]) return;
+      ocrResults[i][field] = field === 'period' ? (parseInt(value, 10) || 1) : value;
+    };
+
+    window.ocrRemove = function(i) {
+      ocrResults.splice(i, 1);
+      renderOcrReview();
+    };
+
+    window.confirmOcrImport = async function() {
+      if (!ocrResults.length) { closeOcrModal(); return; }
+      if (!(await sheetConfirm({ title: '导入课表', message: '将用识别结果覆盖「当前课表」中对应星期（共 ' + new Set(ocrResults.map(e => e.weekday)).size + ' 天）的原有内容，确定导入？', okText: '导入' }))) return;
+      const grouped = {};
+      ocrResults.forEach(e => {
+        if (!e.subject.trim()) return;
+        (grouped[e.weekday] = grouped[e.weekday] || []).push(e);
+      });
+      Object.keys(grouped).forEach(wd => {
+        const old = scheduleCurrent[wd] || [];
+        scheduleCurrent[wd] = grouped[wd]
+          .slice()
+          .sort((a, b) => a.period - b.period)
+          .map(e => {
+            const oldItem = old.find(p => p.period === e.period);
+            return { period: e.period, time: periodTimes[e.period] || (oldItem ? oldItem.time : ''), subject: e.subject.trim(), roomType: oldItem ? normalizeRoomType(oldItem) : '教室', cls: (e.cls || '').trim(), mine: !!e.mine };
+          });
+      });
+      ocrResults = [];
+      closeOcrModal();
       renderSchedule();
-    });
+    };
 
     // ===== 渲染调课记录 =====
     function renderScheduleChanges() {
@@ -2722,9 +3696,9 @@
         activeClassId: activeClassId,
         teacherName: teacherName,
         todos: todos,
-        scheduleOriginal: scheduleOriginal,
         scheduleCurrent: scheduleCurrent,
-        scheduleChanges: scheduleChanges
+        scheduleChanges: scheduleChanges,
+        periodTimes: periodTimes
       };
       exportFile('教师工作台备份_' + getTodayStr() + '.json', JSON.stringify(data, null, 2));
     };
@@ -2742,8 +3716,8 @@
           activeClassId = (p.activeClassId && classesData[p.activeClassId]) ? p.activeClassId : Object.keys(classesData)[0];
           if (Array.isArray(p.todos)) todos = p.todos;
           if (p.teacherName) teacherName = p.teacherName;
-          if (p.scheduleOriginal) scheduleOriginal = p.scheduleOriginal;
           if (p.scheduleCurrent) scheduleCurrent = p.scheduleCurrent;
+          weekdays.forEach(d => (scheduleCurrent[d] || []).forEach(item => normalizeRoomType(item)));
           if (Array.isArray(p.scheduleChanges)) scheduleChanges = p.scheduleChanges;
           loadActiveClass();
           renderAllPages();
@@ -3015,38 +3989,112 @@
   </script>
 
   <!-- 课表编辑弹窗（点击课表卡片进入） -->
-  <div id="schedule-edit-modal" class="hidden fixed inset-0 bg-black/40 z-40 flex items-end justify-center" onclick="if(event.target===this)closeScheduleEdit()">
-    <div class="modal-card bg-white w-full max-w-md rounded-t-2xl p-5 pb-7">
-      <div class="flex justify-between items-center mb-4">
+  <div id="schedule-edit-modal" class="hidden fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onclick="if(event.target===this)closeScheduleEdit()">
+    <div class="modal-card bg-white w-full max-w-md rounded-t-2xl p-5 pb-7 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center mb-4 shrink-0">
         <h3 class="font-bold text-gray-800" id="schedule-edit-title">编辑课程</h3>
         <button class="text-gray-400 text-2xl leading-none" onclick="closeScheduleEdit()">×</button>
       </div>
-      <div class="space-y-3">
+      <div class="space-y-3 overflow-y-auto flex-1">
         <div>
           <label class="text-xs text-gray-500">科目</label>
           <input id="se-subject" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 语文">
         </div>
         <div>
-          <label class="text-xs text-gray-500">时间</label>
-          <input id="se-time" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 08:00-08:40">
+          <label class="text-xs text-gray-500">第几节</label>
+          <select id="se-period" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200"></select>
         </div>
         <div>
-          <label class="text-xs text-gray-500">教室</label>
-          <input id="se-room" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 501">
+          <label class="text-xs text-gray-500">时间</label>
+          <div class="flex items-center gap-2 mt-1">
+            <input type="time" id="se-time-start" class="flex-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200">
+            <span class="text-xs text-gray-400">至</span>
+            <input type="time" id="se-time-end" class="flex-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">班级（这门课给哪个班上，可留空）</label>
+          <input id="se-cls" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 五3">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">场地类型</label>
+          <select id="se-roomtype" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200"></select>
         </div>
         <div>
           <label class="text-xs text-gray-500">调课说明（留空=非调课）</label>
           <input id="se-note" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" placeholder="如 与体育调换">
         </div>
+        <label class="flex items-center gap-2 py-1 cursor-pointer">
+          <input type="checkbox" id="se-mine" class="w-4 h-4 accent-brand-600">
+          <span class="text-sm text-gray-700">这是我自己的课（在课表中突出显示）</span>
+        </label>
       </div>
-      <div class="flex gap-2 mt-5">
+      <div class="flex gap-2 mt-5 shrink-0 pt-1 bg-white">
         <button id="se-delete" class="flex-none px-4 py-2.5 rounded-xl text-sm text-red-600 bg-red-50" onclick="deleteScheduleEdit()">删除</button>
         <button class="flex-1 py-2.5 rounded-xl text-sm text-white bg-brand-600 font-medium" onclick="saveScheduleEdit()">保存</button>
       </div>
     </div>
   </div>
+  <!-- 课表 OCR 识别弹窗 -->
+  <input type="file" id="ocr-file" accept="image/*" class="hidden" onchange="ocrFileChosen(this)">
+  <div id="ocr-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onclick="if(event.target===this)closeOcrModal()">
+    <div class="modal-card bg-white w-full max-w-md rounded-t-2xl p-5 pb-7 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-gray-800">识别课表</h3>
+        <button class="text-gray-400 text-2xl leading-none" onclick="closeOcrModal()">×</button>
+      </div>
+      <div id="ocr-status" class="text-sm text-gray-500 py-8 text-center" style="white-space:pre-line"></div>
+      <div id="ocr-review" class="hidden flex-1 overflow-y-auto">
+        <p class="text-xs text-gray-400 mb-2 leading-relaxed">请核对识别结果（可直接修改），勾选「我的课」的课程会在课表中突出显示。导入后将覆盖「当前课表」对应星期的内容。</p>
+        <div class="space-y-2 mb-3" id="ocr-review-list"></div>
+        <button class="w-full py-2.5 rounded-xl text-sm text-white bg-brand-600 font-medium mb-1" onclick="confirmOcrImport()">导入到当前课表</button>
+      </div>
+      <button id="ocr-debug-btn" class="hidden w-full mt-2 py-2 text-xs text-gray-500 bg-gray-100 rounded-xl" onclick="exportOcrDebug()">分享识别调试信息（识别不准时发给开发者）</button>
+    </div>
+  </div>
+  <!-- 座位图全屏横屏查看（CSS 旋转 90°，请把手机横过来） -->
+  <div id="seat-zoom-modal" class="hidden fixed inset-0 z-50 bg-gray-900/95" onclick="if(event.target===this)closeSeatZoom()">
+    <button class="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/15 text-white text-xl leading-none flex items-center justify-center" onclick="closeSeatZoom()">×</button>
+    <div class="absolute top-3 left-3 z-10 text-white/60 text-[11px]">↻ 请横屏查看</div>
+    <div id="seat-zoom-rot" class="absolute" style="top:50%;left:50%;width:100vh;height:100vw;transform:translate(-50%,-50%) rotate(90deg);overflow-y:auto">
+      <div id="seat-zoom-content" class="p-4 min-h-full flex flex-col justify-center"></div>
+    </div>
+  </div>
+  <!-- 调课弹窗（选择目标星期+节次，两节课互换） -->
+  <div id="swap-modal" class="hidden fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onclick="if(event.target===this)closeSwapCourse()">
+    <div class="modal-card bg-white w-full max-w-md rounded-t-2xl p-5 pb-7">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-gray-800" id="swap-title">调课</h3>
+        <button class="text-gray-400 text-2xl leading-none" onclick="closeSwapCourse()">×</button>
+      </div>
+      <p class="text-xs text-gray-400 mb-3">把这节课换到下面的时间，两个节次的内容会互换（时间属于节次槽位，不随课程走）。</p>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-gray-500">目标星期</label>
+          <select id="swap-weekday" class="w-full mt-1 px-3 py-2.5 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200" onchange="renderSwapPeriods()"></select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">目标节次</label>
+          <select id="swap-period" class="w-full mt-1 px-3 py-2.5 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-200"></select>
+        </div>
+      </div>
+      <button class="w-full mt-5 py-2.5 rounded-xl text-sm text-white bg-brand-600 font-medium" onclick="confirmSwapCourse()">确认调课</button>
+    </div>
+  </div>
+  <!-- 节次时间维护弹窗 -->
+  <div id="period-times-modal" class="hidden fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onclick="if(event.target===this)closePeriodTimes()">
+    <div class="modal-card bg-white w-full max-w-md rounded-t-2xl p-5 pb-7 max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="font-bold text-gray-800">节次时间</h3>
+        <button class="text-gray-400 text-2xl leading-none" onclick="closePeriodTimes()">×</button>
+      </div>
+      <p class="text-xs text-gray-400 mb-3 leading-relaxed">学校每节课的固定起止时间，新增节次和识别导入时会自动带上对应时间。</p>
+      <div class="space-y-2 overflow-y-auto flex-1" id="period-times-list"></div>
+      <button class="w-full mt-4 py-2.5 rounded-xl text-sm text-white bg-brand-600 font-medium" onclick="savePeriodTimes()">保存</button>
+    </div>
+  </div>
   <!-- 班级切换窗口 -->
-  <div id="class-window" class="hidden fixed inset-0 bg-black/40 z-40 flex items-end justify-center" onclick="if(event.target===this)closeClassWindow()">
+  <div id="class-window" class="hidden fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onclick="if(event.target===this)closeClassWindow()">
     <div class="modal-card bg-white w-full max-w-md rounded-t-2xl p-5 pb-7">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-gray-800">班级管理</h3>
@@ -3057,7 +4105,7 @@
     </div>
   </div>
   <!-- 学生详情底弹层 -->
-  <div id="student-detail" class="hidden fixed inset-0 z-40 flex items-end justify-center bg-black/40" onclick="if(event.target===this)hideStudentDetail()">
+  <div id="student-detail" class="hidden fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onclick="if(event.target===this)hideStudentDetail()">
     <div class="modal-card bg-gray-50 w-full max-w-md rounded-t-3xl h-[85vh] overflow-y-auto pb-8">
       <div class="pt-2 pb-1 flex justify-center"><div class="w-10 h-1 bg-gray-200 rounded-full"></div></div>
       <div id="student-detail-content"></div>
@@ -3065,7 +4113,7 @@
   </div>
 
   <!-- 通用底部弹层（输入/确认） -->
-  <div id="sheet-modal" class="hidden fixed inset-0 z-50 flex items-end justify-center bg-black/40" onclick="if(event.target===this)sheetBackdropTap()">
+  <div id="sheet-modal" class="hidden fixed inset-0 z-[70] flex items-end justify-center bg-black/40" onclick="if(event.target===this)sheetBackdropTap()">
     <div class="modal-card bg-white w-full max-w-md rounded-t-3xl p-5 pb-8">
       <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4"></div>
       <h3 class="font-bold text-gray-900 text-lg mb-1" id="sheet-title"></h3>
